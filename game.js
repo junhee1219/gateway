@@ -749,6 +749,7 @@
       start: startGame,
       setGate: (l) => Core.setGate(game, l),
       audioState: () => (A.ctx ? A.ctx.state : 'none'),
+      audioSteps: () => A.steps, // 시퀀서 생존 카운터
     };
   }
 

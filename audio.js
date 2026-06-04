@@ -18,6 +18,7 @@ const GatewayAudio = (() => {
   let curIntensity = 0;                // 부드럽게 따라가는 현재값
   let feverOn = false;
   let musicOn = false;
+  let stepsScheduled = 0;              // QA: 시퀀서 생존 증명 (계속 증가해야 정상)
 
   // A minor 진행: Am - F - C - G (마디당 1코드)
   const CHORDS = [
@@ -150,6 +151,7 @@ const GatewayAudio = (() => {
 
   // 한 스텝(16분음표) 스케줄
   function scheduleStep(t, idx) {
+    stepsScheduled++;
     const bar = Math.floor(idx / 16) % 4;
     const step = idx % 16;
     const chord = CHORDS[bar];
@@ -345,6 +347,7 @@ const GatewayAudio = (() => {
   return {
     init, setMuted, get muted() { return muted; },
     get ctx() { return ctx; },
+    get steps() { return stepsScheduled; },
     startMusic, stopMusic, setIntensity, setFever,
     drain, whoosh, dock, warn, comboUp, abort, overflow, gameOver, record, uiClick,
     suspend() { if (ctx && ctx.state === 'running') ctx.suspend(); },
