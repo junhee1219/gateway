@@ -9,7 +9,7 @@ const GatewayAudio = (() => {
   let muted = localStorage.getItem('gatewayMuted') === '1';
 
   // ── 시퀀서 상태 ──
-  const BPM = 110;
+  const BPM = 124;                     // 몸이 들썩이는 템포
   const STEP = 60 / BPM / 4;          // 16분음표 길이
   let schedTimer = null;
   let nextStepTime = 0;
@@ -255,6 +255,44 @@ const GatewayAudio = (() => {
     o.start(t); o.stop(t + 0.06);
   }
 
+  // 펌핑: 짧은 상승 틱 — 연타할수록 음이 올라가 기분 좋게
+  function pump(combo) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const f = 900 * Math.pow(1.03, Math.min(combo, 15));
+    const o = osc('square', f, t);
+    o.frequency.exponentialRampToValueAtTime(f * 1.35, t + 0.05);
+    const g = ctx.createGain();
+    env(g, t, 0.001, 0.10, 0.05);
+    o.connect(g); g.connect(sfx);
+    o.start(t); o.stop(t + 0.07);
+  }
+
+  // 골드 획득: 빛나는 더블 차임
+  function gold() {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    [88, 95, 100].forEach((m, i) => { // E6 B6 E7
+      const o = osc('triangle', mtof(m), t + i * 0.07);
+      const g = ctx.createGain();
+      env(g, t + i * 0.07, 0.003, 0.22, 0.3);
+      o.connect(g); g.connect(sfx);
+      o.start(t + i * 0.07); o.stop(t + i * 0.07 + 0.34);
+    });
+  }
+
+  // 골드 증발: 시무룩 하강
+  function goldLost() {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = osc('triangle', 700, t);
+    o.frequency.exponentialRampToValueAtTime(180, t + 0.3);
+    const g = ctx.createGain();
+    env(g, t, 0.005, 0.16, 0.3);
+    o.connect(g); g.connect(sfx);
+    o.start(t); o.stop(t + 0.34);
+  }
+
   // 위험 경고 (레인 90% 돌파)
   function warn() {
     if (!ctx) return;
@@ -348,8 +386,9 @@ const GatewayAudio = (() => {
     init, setMuted, get muted() { return muted; },
     get ctx() { return ctx; },
     get steps() { return stepsScheduled; },
+    get bpm() { return BPM; },
     startMusic, stopMusic, setIntensity, setFever,
-    drain, whoosh, dock, warn, comboUp, abort, overflow, gameOver, record, uiClick,
+    drain, whoosh, dock, pump, gold, goldLost, warn, comboUp, abort, overflow, gameOver, record, uiClick,
     suspend() { if (ctx && ctx.state === 'running') ctx.suspend(); },
     resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); },
   };

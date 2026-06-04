@@ -50,7 +50,7 @@
   let visOrbs = new Map();     // id → 시각 상태
   let drainVis = null;         // 배출 중 오브 시각 상태
   let particles = [], texts = [], ripples = [];
-  let shake = 0, flash = 0, flashColor = '255,255,255', redPulse = 0;
+  let shake = 0, flash = 0, flashColor = '255,255,255', redPulse = 0, gateKick = 0;
   let timeScale = 1, slowmoT = 0;
   let lastWarnT = -9, prevMult = 1, feverGlow = 0;
   let scoreShown = 0;          // 점수 롤링
@@ -69,15 +69,18 @@
     2: { main: '#d49bff', glow: 'rgba(212,155,255,' },
     3: { main: '#ffd166', glow: 'rgba(255,209,102,' },
   };
+  const GOLD_COL = { main: '#ffe16b', glow: 'rgba(255,225,107,' };
+  const orbCol = (v) => (v.gold ? GOLD_COL : SIZE_COL[v.size]);
 
   // ── 유틸 ──
   const lerp = (a, b, t) => a + (b - a) * t;
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const rnd = (a, b) => a + Math.random() * (b - a);
   function vibrate(ms) { if (navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
-  function beatPhase() { // 110BPM 4분음표 위상 (0~1) — 비트 동기 펄스
-    if (A.ctx) return (A.ctx.currentTime % (60 / 110)) / (60 / 110);
-    return (performance.now() / 1000 % (60 / 110)) / (60 / 110);
+  function beatPhase() { // 4분음표 위상 (0~1) — 비트 동기 펄스
+    const per = 60 / (A.bpm || 124);
+    if (A.ctx) return (A.ctx.currentTime % per) / per;
+    return (performance.now() / 1000 % per) / per;
   }
 
   // ── 파티클 ──
@@ -163,6 +166,19 @@
           break;
         }
         case 'switch': A.whoosh(); break;
+        case 'pump': {
+          A.pump(game.combo);
+          gateKick = 1;
+          burst(cx, gateY, game.drain ? orbCol({ gold: false, size: game.drain.size }).glow : 'rgba(255,255,255,', 3, 110, 0.25, 2);
+          vibrate(6);
+          break;
+        }
+        case 'goldLost': {
+          A.goldLost();
+          burst(cx, stackTopY(ev.lane), 'rgba(180,170,140,', 14, 80, 0.5, 2.5);
+          addText(cx, stackTopY(ev.lane) - 20, '✨ 증발…', '#b8ae8c', 15, false);
+          break;
+        }
         case 'docked': {
           A.dock();
           shock(laneCenter(ev.lane), gateY, LCOL[ev.lane].glow, 40);
@@ -170,13 +186,17 @@
         }
         case 'drainStart': break;
         case 'drain': {
-          const col = SIZE_COL[ev.size];
-          const n = ev.size === 3 ? 26 : ev.size === 2 ? 16 : 10;
-          burst(cx, gateY, col.glow, n, 170 + ev.size * 40, 0.55, 3.5);
-          shock(cx, gateY, col.glow, 60 + ev.size * 18);
-          shake = Math.max(shake, ev.size === 3 ? 7 : ev.size === 2 ? 4 : 2);
-          addText(cx, gateY - 46, `+${ev.pts}`, ev.rescue ? '#ffe16b' : col.main,
-            16 + ev.size * 4 + (ev.mult > 1 ? 4 : 0), ev.rescue);
+          const col = ev.gold ? GOLD_COL : SIZE_COL[ev.size];
+          const n = (ev.gold ? 34 : ev.size === 3 ? 26 : ev.size === 2 ? 16 : 10);
+          burst(cx, gateY, col.glow, n, 170 + ev.size * 40 + (ev.gold ? 80 : 0), 0.55, 3.5);
+          shock(cx, gateY, col.glow, 60 + ev.size * 18 + (ev.gold ? 40 : 0));
+          shake = Math.max(shake, ev.gold ? 8 : ev.size === 3 ? 7 : ev.size === 2 ? 4 : 2);
+          addText(cx, gateY - 46, `+${ev.pts.toLocaleString()}${ev.gold ? ' ✨' : ''}`, ev.rescue || ev.gold ? '#ffe16b' : col.main,
+            16 + ev.size * 4 + (ev.mult > 1 ? 4 : 0) + (ev.gold ? 6 : 0), ev.rescue || ev.gold);
+          if (ev.gold) {
+            A.gold();
+            flash = Math.max(flash, 0.3); flashColor = '255,225,107';
+          }
           if (ev.rescue) {
             addText(cx, gateY - 78, '구사일생! ×2', '#ffe16b', 17, true);
             flash = Math.max(flash, 0.25); flashColor = '255,225,107';
@@ -215,31 +235,31 @@
   }
 
   // ── 게임오버 화면 ──
-  const COFFEE = 15000; // 커피 이스터에그 점수 (되게 넘기 힘든 점수 — test.js 봇 기준 검증)
+  const COFFEE = 300000; // 커피 이스터에그 점수 (되게 넘기 힘든 점수 — test.js 스마트봇 최고 16.2만의 1.85배)
   function deathMessage(score) {
     if (score >= COFFEE) return {
       e: '🏆', t: '전설의 게이트 마스터!',
       m: `<b>${score.toLocaleString()}점</b>?! 이건 개발자도 못 깬 기록이에요.<br>너무 고수라서 개발자가 커피 한 잔 사겠습니다 ☕<br><a href="mailto:junhee@finda.co.kr">junhee@finda.co.kr</a> 로 연락 주세요!`,
     };
-    if (score >= 8000) return {
+    if (score >= 150000) return {
       e: '👑', t: '수석 관제사',
       m: `<b>${score.toLocaleString()}점</b>! 관문이 당신을 신뢰하기 시작했어요.<br>${COFFEE.toLocaleString()}점을 넘기면 좋은 일이 생긴다는 소문이...`,
     };
-    if (score >= 4000) return {
+    if (score >= 70000) return {
       e: '🔥', t: '베테랑 관제사',
       m: `<b>${score.toLocaleString()}점</b>! 세 레인을 동시에 읽는 눈,<br>예사롭지 않은데요?`,
     };
-    if (score >= 1500) return {
+    if (score >= 25000) return {
       e: '🚦', t: '정식 관제사 승급!',
       m: `<b>${score.toLocaleString()}점</b>! 이제 관문이<br>슬슬 만만해 보이기 시작했죠?`,
     };
-    if (score >= 400) return {
+    if (score >= 6000) return {
       e: '🍀', t: '견습 관제사',
-      m: `<b>${score.toLocaleString()}점</b>! 몸풀기는 끝.<br>큰 오브(80점)를 노려보세요`,
+      m: `<b>${score.toLocaleString()}점</b>! 몸풀기는 끝.<br>연타 펌핑과 골드를 노려보세요`,
     };
     if (score >= 1) return {
       e: '🌱', t: '관제 연수생',
-      m: `<b>${score}점</b>! 게이트는 탭한 레인으로 움직여요.<br>가득 찬 레인부터 비워봐요`,
+      m: `<b>${score.toLocaleString()}점</b>! 게이트는 탭한 레인으로 이동,<br>같은 레인 연타로 더 빨리 배출해요`,
     };
     return { e: '🥚', t: '음...', m: '오브는 장식이 아니에요! 🥲<br>레인을 탭해서 게이트를 옮겨봐요' };
   }
@@ -278,7 +298,8 @@
     if (mode === 'playing') {
       Core.update(game, gdt);
       handleEvents();
-      A.setIntensity(Core.dangerLevel(game) * 0.85 + Math.min(0.3, game.combo * 0.015));
+      // 바닥 0.3: 시작부터 드럼이 들어와 음악이 비어있지 않게
+      A.setIntensity(Math.max(0.3, Core.dangerLevel(game) * 0.85 + Math.min(0.3, game.combo * 0.015)));
       A.setFever(game.combo >= 10);
     }
     if (overflowFx) overflowFx.t += dt;
@@ -301,7 +322,7 @@
           const targetY = yBase - orb.size * unitH / 2;
           let v = visOrbs.get(orb.id);
           if (!v) { v = { x: laneCenter(l), y: targetY, vy: 0, r, size: orb.size, lane: l, ph: Math.random() * 7 }; visOrbs.set(orb.id, v); }
-          v.lane = l; v.r = r;
+          v.lane = l; v.r = r; v.gold = !!orb.gold; v.expire = orb.expire || 0; v.falling = false;
           const k = 120, damp = 10;                       // 스프링
           v.vy += (targetY - v.y) * k * dt; v.vy -= v.vy * damp * dt;
           v.y += v.vy * dt;
@@ -314,9 +335,9 @@
         const p = 1 - o.timer / C.FALL_TIME;
         const targetTop = stackTopY(o.lane) - o.size * unitH / 2;
         const y = lerp(tubeTop - 30, targetTop, p * p);   // 가속 낙하
-        if (!v) { v = { x: laneCenter(o.lane), y, vy: 0, r: laneW * SIZE_R[o.size], size: o.size, lane: o.lane, ph: Math.random() * 7, falling: true }; visOrbs.set(o.id, v); }
+        if (!v) { v = { x: laneCenter(o.lane), y, vy: 0, r: laneW * SIZE_R[o.size], size: o.size, lane: o.lane, ph: Math.random() * 7, falling: true, gold: !!o.gold }; visOrbs.set(o.id, v); }
         v.y = y; v.falling = true;
-        if (Math.random() < 0.5) suck(v.x, v.y - 8, v.x, v.y - 26, SIZE_COL[o.size].glow); // 트레일
+        if (Math.random() < (v.gold ? 0.9 : 0.5)) suck(v.x, v.y - 8, v.x, v.y - 26, orbCol(v).glow); // 트레일
       }
       // 사라진 오브 정리
       const aliveIds = new Set();
@@ -355,6 +376,7 @@
       if (r.age >= r.life) ripples.splice(i, 1);
     }
     shake = Math.max(0, shake - dt * 26);
+    gateKick = Math.max(0, gateKick - dt * 9);
     flash = Math.max(0, flash - dt * 2.2);
     redPulse = Math.max(0, redPulse - dt * 1.4);
     feverGlow = lerp(feverGlow, (game && game.combo >= 10) ? 1 : 0, dt * 4);
@@ -494,9 +516,19 @@
     ctx.save();
     const t = performance.now() / 1000;
     for (const v of visOrbs.values()) {
-      const col = SIZE_COL[v.size];
+      const col = orbCol(v);
       const wob = Math.sin(t * 3 + v.ph) * 1.5;
-      drawOrb(v.x, v.y + wob, v.r, col, v.size, t + v.ph);
+      const yy = v.y + wob;
+      drawOrb(v.x, yy, v.r, col, v.size, t + v.ph);
+      // 골드: 증발 카운트다운 링
+      if (v.gold && v.expire > 0 && game.alive) {
+        const remain = clamp((v.expire - game.t) / C.GOLD.life, 0, 1);
+        ctx.strokeStyle = remain < 0.35 ? `rgba(255,90,90,${0.6 + 0.4 * Math.sin(t * 18)})` : 'rgba(255,225,107,0.85)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(v.x, yy, v.r + 7, -Math.PI / 2, -Math.PI / 2 + remain * Math.PI * 2);
+        ctx.stroke();
+      }
     }
     ctx.restore();
     // 배출 중 오브 (게이트로 빨려들기)
@@ -512,7 +544,7 @@
           ctx.save();
           ctx.translate(v.x, v.y);
           ctx.scale(sq, 1 + p * 0.55); // 늘어나며 빨려듦
-          drawOrb(0, 0, v.r, SIZE_COL[v.size], v.size, performance.now() / 1000);
+          drawOrb(0, 0, v.r, orbCol(v), v.size, performance.now() / 1000);
           ctx.restore();
         }
       }
@@ -553,7 +585,7 @@
     const gx = laneX[0] + laneW / 2 + game.gate.x * laneW;
     const t = performance.now() / 1000;
     const draining = game.drain && !game.gate.moving;
-    const R = laneW * 0.34;
+    const R = laneW * 0.34 * (1 + gateKick * 0.14); // 펌핑 시 링 펀치
     ctx.save();
     // 게이트 → 코어 빔
     if (draining) {

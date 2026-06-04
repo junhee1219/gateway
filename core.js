@@ -5,21 +5,23 @@
 const CONF = {
   LANES: 3,
   CAP: 10,                 // 레인 용량 (유닛)
-  TRANSIT: 0.28,           // 게이트 레인 이동 시간 (이동 중 배출 불가)
-  FALL_TIME: 0.55,         // 스폰 → 큐 착지까지 (착지 순간 오버플로 판정)
+  TRANSIT: 0.22,           // 게이트 레인 이동 시간 (이동 중 배출 불가)
+  FALL_TIME: 0.45,         // 스폰 → 큐 착지까지 (착지 순간 오버플로 판정)
   SIZES: {
-    1: { score: 10, pass: 0.40 },  // S
-    2: { score: 30, pass: 0.80 },  // M
-    3: { score: 80, pass: 1.40 },  // L
+    1: { score: 100, pass: 0.26 },  // S
+    2: { score: 300, pass: 0.55 },  // M
+    3: { score: 800, pass: 0.95 },  // L
   },
-  COMBO_WINDOW: 3.0,       // 이 시간 안에 연속 배출하면 콤보 유지
+  PUMP: 0.16,              // 현재 레인 탭 1회당 배출 진행 보너스 (연타 = 가속)
+  GOLD: { from: 8, chance: 0.07, life: 5.0, mult: 5 }, // 골드 오브: 5배, 착지 후 5초 내 못 빼면 증발
+  COMBO_WINDOW: 2.5,       // 이 시간 안에 연속 배출하면 콤보 유지
   RESCUE_FILL: 0.8,        // 배출 시작 시 레인이 이 비율 이상이면 구사일생 x2
-  SPAWN_START: 2.1,        // 초기 스폰 간격(초)
-  SPAWN_MIN: 0.68,         // 최소 스폰 간격
-  SPAWN_TAU: 55,           // 간격 감쇠 시정수
-  RAMP_T: 120,             // 크기 분포가 최종에 도달하는 시간
-  WAVE_FROM: 30,           // 이 시간 이후 더블 스폰(딜레마) 발생
-  WAVE_CHANCE: 0.22,       // 스폰마다 더블 스폰이 될 확률 (WAVE_FROM 이후)
+  SPAWN_START: 1.15,       // 초기 스폰 간격(초) — 시작부터 바쁘게
+  SPAWN_MIN: 0.45,         // 최소 스폰 간격
+  SPAWN_TAU: 35,           // 간격 감쇠 시정수 (풀압박 도달 ~50초)
+  RAMP_T: 75,              // 크기 분포가 최종에 도달하는 시간
+  WAVE_FROM: 12,           // 이 시간 이후 더블 스폰(딜레마) 발생
+  WAVE_CHANCE: 0.3,        // 스폰마다 더블 스폰이 될 확률 (WAVE_FROM 이후)
 };
 
 // mulberry32 — 시드 고정 가능한 RNG (테스트 재현용)
@@ -62,17 +64,20 @@ function createGame(seed = 1) {
     falling: [],            // { lane, size, timer } — 착지 전 오브
     gate: { lane: 1, x: 1, moving: false, from: 1, to: 1, progress: 0 },
     drain: null,            // { size, progress, pass, rescue }
-    spawnTimer: 1.2,        // 첫 스폰까지 약간의 여유
+    spawnTimer: 0.7,        // 첫 스폰까지 짧은 여유
     sameLaneStreak: { lane: -1, count: 0 },
     alive: true,
     overflowLane: -1,
-    stats: { drained: 0, drainedUnits: 0, rescues: 0, switches: 0, aborts: 0 },
+    stats: { drained: 0, drainedUnits: 0, rescues: 0, switches: 0, aborts: 0, pumps: 0 },
     events: [],             // 렌더러/오디오가 프레임마다 소비
     nextId: 1,
   };
-  // 시작하자마자 할 일이 있도록 스타터 오브 (게이트 레인 + 옆 레인)
-  g.falling.push({ id: g.nextId++, lane: 1, size: 1, timer: 0.35 });
-  g.falling.push({ id: g.nextId++, lane: 0, size: 1, timer: 0.75 });
+  // 한가한 첫 30초 제거: 레인 프리필 + 낙하 2개 — 시작 즉시 일감
+  g.lanes[0].queue.push({ id: g.nextId++, size: 1 }); g.lanes[0].fill = 1;
+  g.lanes[1].queue.push({ id: g.nextId++, size: 2 }); g.lanes[1].fill = 2;
+  g.lanes[2].queue.push({ id: g.nextId++, size: 1 }); g.lanes[2].fill = 1;
+  g.falling.push({ id: g.nextId++, lane: 1, size: 1, timer: 0.3 });
+  g.falling.push({ id: g.nextId++, lane: 0, size: 1, timer: 0.6 });
   return g;
 }
 
@@ -114,16 +119,19 @@ function pickLane(g) {
   return lane;
 }
 
-function spawnOrb(g, lane, size) {
-  g.falling.push({ id: g.nextId++, lane, size, timer: CONF.FALL_TIME });
-  g.events.push({ type: 'spawn', lane, size });
+function spawnOrb(g, lane, size, gold) {
+  g.falling.push({ id: g.nextId++, lane, size, gold: !!gold, timer: CONF.FALL_TIME });
+  g.events.push({ type: 'spawn', lane, size, gold: !!gold });
 }
 
 function doSpawn(g) {
   const lane = pickLane(g);
-  const size = pickSize(g);
-  spawnOrb(g, lane, size);
-  // 딜레마 생성기: 후반엔 가끔 다른 레인에 하나 더
+  let size = pickSize(g);
+  // 골드 오브: S 크기, 5배 점수, 착지 후 제한시간 내 못 빼면 증발 — "지금 저 줄로?!" 유발
+  let gold = false;
+  if (g.t > CONF.GOLD.from && g.rng() < CONF.GOLD.chance) { size = 1; gold = true; }
+  spawnOrb(g, lane, size, gold);
+  // 딜레마 생성기: 가끔 다른 레인에 하나 더
   if (g.t > CONF.WAVE_FROM && g.rng() < CONF.WAVE_CHANCE) {
     const others = [0, 1, 2].filter((l) => l !== lane);
     const lane2 = others[g.rng() < 0.5 ? 0 : 1];
@@ -131,12 +139,21 @@ function doSpawn(g) {
   }
 }
 
-// 게이트 이동 요청 (사용자 입력). 이동 중 재타겟 허용.
+// 게이트 이동/펌핑 요청 (사용자 입력). 이동 중 재타겟 허용.
 function setGate(g, lane) {
   if (!g.alive) return false;
   if (lane < 0 || lane >= CONF.LANES) return false;
-  if (!g.gate.moving && g.gate.lane === lane) return false;
-  if (g.gate.moving && g.gate.to === lane) return false;
+  const cur = g.gate.moving ? g.gate.to : g.gate.lane;
+  if (lane === cur) {
+    // 같은 레인 연타 = 펌핑: 배출 가속 (손이 쉬지 않게)
+    if (g.drain && !g.gate.moving) {
+      g.drain.progress += CONF.PUMP;
+      g.stats.pumps++;
+      g.events.push({ type: 'pump', lane });
+      return true;
+    }
+    return false;
+  }
   if (g.drain) { // 배출 중단 — 진행도 날아감 (전환 페널티)
     g.drain = null;
     g.stats.aborts++;
@@ -176,8 +193,21 @@ function update(g, dt) {
         return;
       }
       lane.fill += o.size;
-      lane.queue.push({ id: o.id, size: o.size });
-      g.events.push({ type: 'land', lane: o.lane, size: o.size });
+      lane.queue.push({ id: o.id, size: o.size, gold: o.gold, expire: o.gold ? g.t + CONF.GOLD.life : 0 });
+      g.events.push({ type: 'land', lane: o.lane, size: o.size, gold: !!o.gold });
+    }
+  }
+
+  // ── 골드 오브 증발 (배출에 빨리는 중인 맨 아래 오브는 유예) ──
+  for (let l = 0; l < CONF.LANES; l++) {
+    const lane = g.lanes[l];
+    for (let i = lane.queue.length - 1; i >= 0; i--) {
+      const o = lane.queue[i];
+      if (!o.gold || g.t < o.expire) continue;
+      if (i === 0 && g.drain && !g.gate.moving && g.gate.lane === l) continue;
+      lane.queue.splice(i, 1);
+      lane.fill -= o.size;
+      g.events.push({ type: 'goldLost', lane: l });
     }
   }
 
@@ -221,14 +251,14 @@ function update(g, dt) {
         g.maxCombo = Math.max(g.maxCombo, g.combo);
         const mult = comboMult(g.combo);
         const rescue = g.drain.rescue;
-        const pts = Math.round(CONF.SIZES[orb.size].score * mult * (rescue ? 2 : 1));
+        const pts = Math.round(CONF.SIZES[orb.size].score * mult * (rescue ? 2 : 1) * (orb.gold ? CONF.GOLD.mult : 1));
         g.score += pts;
         g.stats.drained++;
         g.stats.drainedUnits += orb.size;
         if (rescue) g.stats.rescues++;
         g.events.push({
           type: 'drain', lane: g.gate.lane, size: orb.size,
-          pts, combo: g.combo, mult, rescue,
+          pts, combo: g.combo, mult, rescue, gold: !!orb.gold,
         });
         g.drain = null;
       }
