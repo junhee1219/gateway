@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0820">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GATEWAY">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="🚦 GATEWAY — 세 레인, 게이트는 하나">
+<meta property="og:description" content="쏟아지는 에너지 오브, 출구는 단 하나. 어느 레인을 열고 언제 옮길까? 머리와 손이 동시에 바빠지는 원터치 관제 게임">
+<meta property="og:image" content="https://junhee1219.github.io/gateway/og/main.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://junhee1219.github.io/gateway/">
+<meta name="twitter:card" content="summary_large_image">
+<title>🚦 GATEWAY — 합류 관문</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: #0a0820;
+    font-family: -apple-system, "Segoe UI", "Apple SD Gothic Neo", sans-serif;
+    user-select: none; -webkit-user-select: none;
+    touch-action: none; -webkit-touch-callout: none;
+    color: #eef;
+  }
+  #game { position: fixed; inset: 0; display: block; touch-action: none; }
+
+  /* ── 음소거 버튼 ── */
+  #btn-mute {
+    position: fixed; top: calc(10px + env(safe-area-inset-top)); right: 12px; z-index: 30;
+    width: 42px; height: 42px; border-radius: 50%;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; font-size: 19px; cursor: pointer;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+
+  /* ── 오버레이 (시작 / 게임오버) ── */
+  #overlay {
+    position: fixed; inset: 0; z-index: 20;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 28px;
+    background: radial-gradient(ellipse at 50% 30%, rgba(60,40,140,0.45), rgba(6,5,22,0.92) 70%);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  }
+  body.show-overlay #overlay { display: flex; }
+  /* 이모지는 그라데이션 텍스트에 넣으면 실루엣이 되므로 별도 요소 */
+  #ov-emoji { font-size: 42px; margin-bottom: 2px; filter: drop-shadow(0 0 14px rgba(150,120,255,0.5)); }
+  #overlay h1 {
+    font-size: clamp(30px, 8.5vw, 44px); font-weight: 800; letter-spacing: 2px;
+    background: linear-gradient(110deg, #27e8ff, #c47bff 50%, #ffb347);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 18px rgba(150,120,255,0.55));
+    margin-bottom: 14px;
+  }
+  #ov-msg { font-size: 15.5px; line-height: 1.65; color: #cfd2ff; margin-bottom: 8px; }
+  #ov-msg b { color: #fff; }
+  #ov-msg a { color: #8ec9ff; }
+  #ov-msg .sub { font-size: 13px; color: #9aa0d0; }
+  .newrecord {
+    display: inline-block; font-weight: 800; color: #ffe16b; font-size: 18px;
+    animation: pop 0.6s ease; text-shadow: 0 0 14px rgba(255,225,107,0.7);
+  }
+  @keyframes pop { 0% { transform: scale(0.3); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+
+  #howto {
+    display: flex; gap: 14px; justify-content: center; margin: 10px 0 6px;
+    font-size: 13px; color: #aab; line-height: 1.5; word-break: keep-all;
+  }
+  #howto .step {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px; padding: 10px 12px; width: 108px;
+  }
+  #howto .step b { display: block; font-size: 19px; margin-bottom: 4px; }
+  #overlay.gameover #howto { display: none; }
+
+  #best-label { font-size: 13px; color: #8d92c4; margin-bottom: 14px; }
+
+  #btn-start {
+    margin-top: 14px; padding: 15px 52px; font-size: 19px; font-weight: 800;
+    color: #0a0820; border: none; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(110deg, #27e8ff, #7dffb1);
+    box-shadow: 0 0 26px rgba(60,230,255,0.45), 0 4px 14px rgba(0,0,0,0.4);
+    animation: breathe 2.2s ease-in-out infinite;
+  }
+  @keyframes breathe { 50% { box-shadow: 0 0 40px rgba(60,230,255,0.75), 0 4px 14px rgba(0,0,0,0.4); transform: scale(1.03); } }
+  #btn-start:active { transform: scale(0.96); }
+  #btn-share {
+    margin-top: 12px; padding: 10px 22px; font-size: 14px; font-weight: 600;
+    color: #cfd2ff; background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; cursor: pointer;
+  }
+
+  /* ── 간식 사주기 (게임오버 화면에만, 은은하게 — cube 패턴) ── */
+  #snack { display: none; margin-top: 22px; font-size: 13px; color: #9aa0d0; }
+  #overlay.gameover #snack { display: block; }
+  #snack .snack-btns { margin-left: 6px; }
+  #snack a {
+    display: inline-block; padding: 5px 12px; margin-left: 5px; border-radius: 999px;
+    font-weight: 700; font-size: 12.5px; text-decoration: none;
+    opacity: 0.85; transition: all 0.15s;
+  }
+  #snack a:hover { opacity: 1; transform: translateY(-1px); }
+  #snack a.toss { background: #3182f6; color: #fff; }
+  #snack a.kakao { background: #fee500; color: #3c1e1e; }
+
+  /* ── PC 딥링크 폴백 모달 ── */
+  #thanks {
+    position: fixed; inset: 0; z-index: 40; display: flex;
+    align-items: center; justify-content: center;
+    background: rgba(4,4,16,0.7);
+  }
+  #thanks.hidden { display: none; }
+  .thanks-card {
+    background: #171530; border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 20px; padding: 30px 26px; text-align: center; max-width: 320px;
+    box-shadow: 0 12px 50px rgba(0,0,0,0.6);
+  }
+  .thanks-emoji { font-size: 38px; margin-bottom: 10px; }
+  .thanks-card h2 { font-size: 19px; margin-bottom: 10px; color: #fff; }
+  .thanks-card p { font-size: 14px; line-height: 1.6; color: #cfd2ff; margin-bottom: 8px; }
+  .thanks-sub { font-size: 12px; color: #9aa0d0; }
+  #thanks-close {
+    margin-top: 12px; padding: 10px 28px; border: none; border-radius: 999px;
+    background: linear-gradient(110deg, #27e8ff, #7dffb1); color: #0a0820;
+    font-weight: 800; font-size: 15px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <button id="btn-mute" aria-label="소리 켜기/끄기">🔊</button>
+
+  <div id="overlay">
+    <div id="ov-emoji">🚦</div>
+    <h1>GATEWAY</h1>
+    <p id="ov-msg">쏟아지는 에너지 오브, 출구는 단 하나.<br>레인이 가득 차 넘치면 끝!</p>
+    <div id="howto">
+      <div class="step"><b>👆</b>레인을 탭하면<br>게이트가 이동</div>
+      <div class="step"><b>⚡</b>큰 오브 80점!<br>통과는 느려요</div>
+      <div class="step"><b>🔥</b>쉼 없이 비우면<br>콤보 ×3까지</div>
+    </div>
+    <div id="best-label"></div>
+    <button id="btn-start">시작!</button>
+    <button id="btn-share">📤 친구에게 자랑하기</button>
+    <div id="snack">
+      <span class="snack-label">재밌었다면 개발자 간식 사주기</span> 🍩
+      <span class="snack-btns">
+        <a class="toss" href="supertoss://send?bank=토스뱅크&accountNo=100025266940&amount=3000">토스</a>
+        <a class="kakao" href="https://qr.kakaopay.com/FP0dZW9ip" target="_blank" rel="noopener">카카오페이</a>
+      </span>
+    </div>
+  </div>
+
+  <!-- PC에서 앱 딥링크가 안 열릴 때 띄우는 "마음만으로도 고마워요" 모달 -->
+  <div id="thanks" class="hidden">
+    <div class="thanks-card">
+      <div class="thanks-emoji">🥹☕</div>
+      <h2>마음만으로도 감동이에요!</h2>
+      <p>송금은 폰에서 열어야 동작하지만,<br>여기까지 눌러주신 것만으로도<br>개발자는 이미 커피 한 잔 마신 기분이에요 💛</p>
+      <p class="thanks-sub">정 보내고 싶다면 폰으로 접속해서 눌러주세요!</p>
+      <button id="thanks-close">고마워요 😊</button>
+    </div>
+  </div>
+
+<script src="core.js"></script>
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

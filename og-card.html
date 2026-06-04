@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!-- OG 카드 생성용 (배포 불필요) — 1200x630 스크린샷 → og/main.png -->
+<html>
+<head><meta charset="UTF-8"><style>*{margin:0;padding:0}body{background:#000}</style></head>
+<body>
+<canvas id="c" width="1200" height="630"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+const W = 1200, H = 630;
+
+// 배경
+const bg = ctx.createLinearGradient(0, 0, 0, H);
+bg.addColorStop(0, '#0d0a2a');
+bg.addColorStop(1, '#221045');
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, W, H);
+
+// 별
+for (let i = 0; i < 90; i++) {
+  const x = (i * 137.5) % W, y = (i * 97.3 + 31) % H;
+  ctx.fillStyle = `rgba(200,220,255,${0.12 + (i % 5) * 0.07})`;
+  const s = 1.5 + (i % 3);
+  ctx.fillRect(x, y, s, s);
+}
+
+// 신스웨이브 그리드 (우측 하단 소실점 느낌)
+ctx.save();
+ctx.globalAlpha = 0.22;
+ctx.strokeStyle = '#7d4dff';
+const vx = 880, vy = 560;
+for (let i = -7; i <= 7; i++) {
+  ctx.beginPath(); ctx.moveTo(vx, vy); ctx.lineTo(vx + i * 260, H + 60); ctx.stroke();
+}
+for (let i = 1; i < 5; i++) {
+  const y = vy + Math.pow(i / 5, 1.7) * (H - vy + 60);
+  ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+}
+ctx.restore();
+
+// 우측: 세 레인 → 게이트 일러스트
+const gx = 880, gy = 400;
+const laneCols = ['#27e8ff', '#c47bff', '#ffb347'];
+ctx.lineCap = 'round';
+[-170, 0, 170].forEach((dx, i) => {
+  const g = ctx.createLinearGradient(0, 60, 0, gy);
+  g.addColorStop(0, laneCols[i] + '00');
+  g.addColorStop(0.45, laneCols[i]);
+  g.addColorStop(1, laneCols[i]);
+  ctx.strokeStyle = g;
+  ctx.lineWidth = 30;
+  ctx.shadowColor = laneCols[i]; ctx.shadowBlur = 30;
+  ctx.beginPath();
+  ctx.moveTo(gx + dx, 40);
+  ctx.quadraticCurveTo(gx + dx, gy - 120, gx + dx * 0.1, gy - 20);
+  ctx.stroke();
+});
+ctx.shadowBlur = 0;
+ctx.save();
+ctx.shadowColor = '#27e8ff'; ctx.shadowBlur = 46;
+ctx.strokeStyle = '#bdf6ff';
+ctx.lineWidth = 20;
+ctx.setLineDash([40, 26]);
+ctx.beginPath(); ctx.arc(gx, gy + 64, 96, 0, 7); ctx.stroke();
+ctx.restore();
+const og2 = ctx.createRadialGradient(gx - 12, gy + 50, 5, gx, gy + 64, 44);
+og2.addColorStop(0, '#ffffff');
+og2.addColorStop(0.4, '#ffd166');
+og2.addColorStop(1, 'rgba(255,179,71,0.1)');
+ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 40;
+ctx.fillStyle = og2;
+ctx.beginPath(); ctx.arc(gx, gy + 64, 42, 0, 7); ctx.fill();
+ctx.shadowBlur = 0;
+
+// 좌측: 타이틀
+ctx.textAlign = 'left';
+ctx.font = '900 110px -apple-system, "Segoe UI", sans-serif';
+const tg = ctx.createLinearGradient(80, 0, 660, 0);
+tg.addColorStop(0, '#27e8ff');
+tg.addColorStop(0.5, '#c47bff');
+tg.addColorStop(1, '#ffb347');
+ctx.fillStyle = tg;
+ctx.shadowColor = 'rgba(150,120,255,0.7)'; ctx.shadowBlur = 26;
+ctx.fillText('GATEWAY', 80, 280);
+ctx.shadowBlur = 0;
+
+ctx.font = '700 40px -apple-system, "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = '#e8e6ff';
+ctx.fillText('세 레인, 게이트는 하나.', 84, 360);
+ctx.font = '500 30px -apple-system, "Apple SD Gothic Neo", sans-serif';
+ctx.fillStyle = '#a9a6d8';
+ctx.fillText('어느 줄을 열고, 언제 옮길까?', 84, 412);
+ctx.fillText('머리와 손이 동시에 바빠지는 원터치 관제 게임', 84, 458);
+</script>
+</body>
+</html>

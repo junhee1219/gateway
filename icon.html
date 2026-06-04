@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!-- 아이콘 생성용 (배포 불필요) — 512x512 캔버스를 스크린샷 → sips로 192/180 다운스케일 -->
+<html>
+<head><meta charset="UTF-8"><style>*{margin:0;padding:0}body{background:#000}canvas{display:block}</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+const S = 512, cx = S / 2;
+
+// 배경 (마스커블 대비 풀블리드 그라데이션)
+const bg = ctx.createLinearGradient(0, 0, 0, S);
+bg.addColorStop(0, '#0d0a2a');
+bg.addColorStop(1, '#1a0f38');
+ctx.fillStyle = bg;
+ctx.fillRect(0, 0, S, S);
+
+// 별
+for (let i = 0; i < 40; i++) {
+  const x = (i * 137.5) % S, y = (i * 89.3 + 40) % S;
+  ctx.fillStyle = `rgba(200,220,255,${0.15 + (i % 5) * 0.08})`;
+  ctx.fillRect(x, y, 2 + (i % 2), 2 + (i % 2));
+}
+
+// 세 레인 (위에서 게이트로 수렴) — 콘텐츠는 중앙 80% 안에
+const gateY = 330, laneTop = 70;
+const laneCols = ['#27e8ff', '#c47bff', '#ffb347'];
+const laneXs = [150, 256, 362];
+ctx.lineCap = 'round';
+laneXs.forEach((x, i) => {
+  const g = ctx.createLinearGradient(0, laneTop, 0, gateY);
+  g.addColorStop(0, laneCols[i] + '00');
+  g.addColorStop(0.4, laneCols[i]);
+  g.addColorStop(1, laneCols[i]);
+  ctx.strokeStyle = g;
+  ctx.lineWidth = 26;
+  ctx.shadowColor = laneCols[i]; ctx.shadowBlur = 24;
+  ctx.beginPath();
+  ctx.moveTo(x, laneTop);
+  ctx.quadraticCurveTo(x, gateY - 90, cx + (x - cx) * 0.12, gateY - 14);
+  ctx.stroke();
+});
+ctx.shadowBlur = 0;
+
+// 게이트 링
+ctx.save();
+ctx.shadowColor = '#27e8ff'; ctx.shadowBlur = 40;
+ctx.strokeStyle = '#bdf6ff';
+ctx.lineWidth = 18;
+ctx.setLineDash([34, 22]);
+ctx.beginPath(); ctx.arc(cx, gateY + 60, 86, 0, 7); ctx.stroke();
+ctx.restore();
+ctx.strokeStyle = 'rgba(39,232,255,0.5)';
+ctx.lineWidth = 6;
+ctx.beginPath(); ctx.arc(cx, gateY + 60, 56, 0, 7); ctx.stroke();
+
+// 링 속 오브
+const og = ctx.createRadialGradient(cx - 10, gateY + 48, 4, cx, gateY + 60, 38);
+og.addColorStop(0, '#ffffff');
+og.addColorStop(0.4, '#ffd166');
+og.addColorStop(1, 'rgba(255,179,71,0.1)');
+ctx.shadowColor = '#ffd166'; ctx.shadowBlur = 36;
+ctx.fillStyle = og;
+ctx.beginPath(); ctx.arc(cx, gateY + 60, 36, 0, 7); ctx.fill();
+ctx.shadowBlur = 0;
+</script>
+</body>
+</html>

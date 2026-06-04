@@ -1,0 +1,15 @@
+{
+  "name": "GATEWAY — 합류 관문",
+  "short_name": "GATEWAY",
+  "description": "쏟아지는 에너지 오브, 출구는 단 하나. 머리와 손이 동시에 바빠지는 원터치 관제 게임",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0820",
+  "theme_color": "#0a0820",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
