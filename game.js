@@ -58,19 +58,22 @@
   let overflowFx = null;       // { lane, t }
   let best = +localStorage.getItem('gatewayBest') || 0;
 
+  // 라면집 팔레트 — 밤거리 포장마차의 따뜻한 빛
   const LCOL = [
-    { main: '#27e8ff', glow: 'rgba(39,232,255,', mid: '#0e7c97' },   // cyan
-    { main: '#c47bff', glow: 'rgba(196,123,255,', mid: '#6b2fa3' },  // violet
-    { main: '#ffb347', glow: 'rgba(255,179,71,', mid: '#a35e0e' },   // amber
+    { main: '#ff6b6b', glow: 'rgba(255,107,107,', mid: '#97320e' },  // 빨강 등
+    { main: '#ffa94d', glow: 'rgba(255,169,77,', mid: '#a3611e' },   // 주황 등
+    { main: '#ffe066', glow: 'rgba(255,224,102,', mid: '#a3870e' },  // 노랑 등
   ];
   const SIZE_R = { 1: 0.16, 2: 0.23, 3: 0.30 }; // 반지름 = laneW * 비율
-  const SIZE_COL = {
-    1: { main: '#6ef3ff', glow: 'rgba(110,243,255,' },
-    2: { main: '#d49bff', glow: 'rgba(212,155,255,' },
-    3: { main: '#ffd166', glow: 'rgba(255,209,102,' },
+  const SIZE_COL = { // 손님: 혼밥러 / 커플 / 단체
+    1: { main: '#ffd43b', glow: 'rgba(255,212,59,' },
+    2: { main: '#ff922b', glow: 'rgba(255,146,43,' },
+    3: { main: '#ff6b6b', glow: 'rgba(255,107,107,' },
   };
-  const GOLD_COL = { main: '#ffe16b', glow: 'rgba(255,225,107,' };
+  const GOLD_COL = { main: '#ffe16b', glow: 'rgba(255,225,107,' }; // 먹방 BJ
   const orbCol = (v) => (v.gold ? GOLD_COL : SIZE_COL[v.size]);
+  const MON = 10; // 표시용 환율: 내부 점수 100 = 1,000원 (라면 한 그릇)
+  const won = (pts) => (pts * MON).toLocaleString() + '원';
 
   // ── 유틸 ──
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -176,7 +179,7 @@
         case 'goldLost': {
           A.goldLost();
           burst(cx, stackTopY(ev.lane), 'rgba(180,170,140,', 14, 80, 0.5, 2.5);
-          addText(cx, stackTopY(ev.lane) - 20, '✨ 증발…', '#b8ae8c', 15, false);
+          addText(cx, stackTopY(ev.lane) - 20, 'BJ가 떠났다… ⭐0.5', '#b8ae8c', 15, false);
           break;
         }
         case 'docked': {
@@ -191,21 +194,22 @@
           burst(cx, gateY, col.glow, n, 170 + ev.size * 40 + (ev.gold ? 80 : 0), 0.55, 3.5);
           shock(cx, gateY, col.glow, 60 + ev.size * 18 + (ev.gold ? 40 : 0));
           shake = Math.max(shake, ev.gold ? 8 : ev.size === 3 ? 7 : ev.size === 2 ? 4 : 2);
-          addText(cx, gateY - 46, `+${ev.pts.toLocaleString()}${ev.gold ? ' ✨' : ''}`, ev.rescue || ev.gold ? '#ffe16b' : col.main,
+          addText(cx, gateY - 46, `+${won(ev.pts)}${ev.gold ? ' ✨' : ''}`, ev.rescue || ev.gold ? '#ffe16b' : col.main,
             16 + ev.size * 4 + (ev.mult > 1 ? 4 : 0) + (ev.gold ? 6 : 0), ev.rescue || ev.gold);
           if (ev.gold) {
             A.gold();
+            addText(cx, gateY - 104, '먹방 대박! 🎥', '#ffe16b', 18, true);
             flash = Math.max(flash, 0.3); flashColor = '255,225,107';
           }
           if (ev.rescue) {
-            addText(cx, gateY - 78, '구사일생! ×2', '#ffe16b', 17, true);
+            addText(cx, gateY - 78, '겨우 달랬다! ×2', '#ffe16b', 17, true);
             flash = Math.max(flash, 0.25); flashColor = '255,225,107';
           }
           const mult = Core.comboMult(ev.combo);
           if (mult > prevMult) {
             A.comboUp(mult >= 3 ? 2 : mult >= 2 ? 1 : 0);
-            addText(W / 2, H * 0.30, `콤보 ×${mult}`, '#7dffb1', 26, true);
-            shock(W / 2, H * 0.30, 'rgba(125,255,177,', 90);
+            addText(W / 2, H * 0.30, `단골 행렬! 팁 ×${mult}`, '#9dff8a', 26, true);
+            shock(W / 2, H * 0.30, 'rgba(157,255,138,', 90);
           }
           prevMult = mult;
           A.drain(ev.size, ev.combo, ev.rescue);
@@ -235,33 +239,34 @@
   }
 
   // ── 게임오버 화면 ──
-  const COFFEE = 300000; // 커피 이스터에그 점수 (되게 넘기 힘든 점수 — test.js 스마트봇 최고 16.2만의 1.85배)
+  const COFFEE = 300000; // 커피 이스터에그 (매출 300만원 — test.js 스마트봇 최고 16.2만의 1.85배)
   function deathMessage(score) {
+    const sales = (score * MON).toLocaleString() + '원';
     if (score >= COFFEE) return {
-      e: '🏆', t: '전설의 게이트 마스터!',
-      m: `<b>${score.toLocaleString()}점</b>?! 이건 개발자도 못 깬 기록이에요.<br>너무 고수라서 개발자가 커피 한 잔 사겠습니다 ☕<br><a href="mailto:junhee@finda.co.kr">junhee@finda.co.kr</a> 로 연락 주세요!`,
+      e: '🏆', t: '전설의 라면 장인!',
+      m: `매출 <b>${sales}</b>?! 이건 개발자도 못 찍은 기록이에요.<br>너무 고수라서 개발자가 커피 한 잔 사겠습니다 ☕<br><a href="mailto:junhee@finda.co.kr">junhee@finda.co.kr</a> 로 연락 주세요!`,
     };
     if (score >= 150000) return {
-      e: '👑', t: '수석 관제사',
-      m: `<b>${score.toLocaleString()}점</b>! 관문이 당신을 신뢰하기 시작했어요.<br>${COFFEE.toLocaleString()}점을 넘기면 좋은 일이 생긴다는 소문이...`,
+      e: '👑', t: '골목 맛집 등극!',
+      m: `매출 <b>${sales}</b>! ⭐4.9 "여기 사장님 미쳤어요"<br>${(COFFEE * MON).toLocaleString()}원을 찍으면 좋은 일이 생긴다는 소문이...`,
     };
     if (score >= 70000) return {
-      e: '🔥', t: '베테랑 관제사',
-      m: `<b>${score.toLocaleString()}점</b>! 세 레인을 동시에 읽는 눈,<br>예사롭지 않은데요?`,
+      e: '🔥', t: '입소문이 돈다',
+      m: `매출 <b>${sales}</b>! ⭐4.5 "줄 서서 먹는 집"<br>세 줄을 동시에 읽는 눈, 예사롭지 않은데요?`,
     };
     if (score >= 25000) return {
-      e: '🚦', t: '정식 관제사 승급!',
-      m: `<b>${score.toLocaleString()}점</b>! 이제 관문이<br>슬슬 만만해 보이기 시작했죠?`,
+      e: '🍜', t: '오늘 장사 좀 되네',
+      m: `매출 <b>${sales}</b>! ⭐4.0 "가끔 늦지만 맛있어요"<br>먹방 BJ(⭐)를 놓치지 마세요, 5배입니다`,
     };
     if (score >= 6000) return {
-      e: '🍀', t: '견습 관제사',
-      m: `<b>${score.toLocaleString()}점</b>! 몸풀기는 끝.<br>연타 펌핑과 골드를 노려보세요`,
+      e: '🌱', t: '개업 효과',
+      m: `매출 <b>${sales}</b>! ⭐3.5 "사장님이 착해요"<br>같은 줄 연타(빨리빨리!)로 회전율을 올려봐요`,
     };
     if (score >= 1) return {
-      e: '🌱', t: '관제 연수생',
-      m: `<b>${score.toLocaleString()}점</b>! 게이트는 탭한 레인으로 이동,<br>같은 레인 연타로 더 빨리 배출해요`,
+      e: '🥢', t: '주방 견습',
+      m: `매출 <b>${sales}</b>! ⭐2.5 "기다리다 갔어요"<br>줄을 탭하면 그쪽으로 서빙, 연타하면 빨라져요`,
     };
-    return { e: '🥚', t: '음...', m: '오브는 장식이 아니에요! 🥲<br>레인을 탭해서 게이트를 옮겨봐요' };
+    return { e: '🥚', t: '개점휴업', m: '⭐1.0 "사장님이 안 계세요" 🥲<br>줄을 탭해서 손님을 받아봐요' };
   }
 
   function showGameOver() {
@@ -277,9 +282,9 @@
     document.getElementById('ov-emoji').textContent = e;
     ov.querySelector('h1').textContent = t;
     ov.querySelector('#ov-msg').innerHTML =
-      (isRecord ? '<span class="newrecord">🎉 NEW RECORD! 🎉</span><br>' : '') + m +
-      (game.maxCombo >= 5 ? `<br><span class="sub">최대 콤보 🔥x${game.maxCombo} · 오브 ${game.stats.drained}개 · 구사일생 ${game.stats.rescues}회</span>` : '');
-    document.getElementById('btn-start').textContent = '다시 하기!';
+      (isRecord ? '<span class="newrecord">🎉 매출 신기록! 🎉</span><br>' : '') + m +
+      (game.maxCombo >= 5 ? `<br><span class="sub">연속 서빙 🔥x${game.maxCombo} · 손님 ${game.stats.drained}팀 · 빨리빨리 ${game.stats.pumps}번</span>` : '');
+    document.getElementById('btn-start').textContent = '다시 장사하기!';
     ov.classList.add('gameover');
     document.body.classList.add('show-overlay');
   }
@@ -416,29 +421,50 @@
 
   function drawBackground() {
     const beat = beatPhase();
-    const pulse = Math.pow(1 - beat, 2) * 0.06; // 비트마다 살짝 밝아짐
-    const g = ctx.createLinearGradient(0, 0, 0, H);
+    const pulse = Math.pow(1 - beat, 2) * 0.05; // 비트마다 살짝 밝아짐
+    const t = performance.now() / 1000;
     const fv = feverGlow;
-    g.addColorStop(0, `hsl(${248 + Math.sin(hueShift / 50) * 10 + fv * 40}, 45%, ${7 + pulse * 30}%)`);
-    g.addColorStop(0.7, `hsl(${262 + fv * 50}, 50%, ${10 + pulse * 40}%)`);
-    g.addColorStop(1, `hsl(${280 + fv * 60}, 55%, ${13 + pulse * 50}%)`);
+    // 밤거리 — 깊은 남색에서 노을빛 바닥으로
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, `hsl(${228 + fv * 10}, 38%, ${7 + pulse * 26}%)`);
+    g.addColorStop(0.65, `hsl(${16 + fv * 10}, ${30 + fv * 20}%, ${9 + pulse * 30}%)`);
+    g.addColorStop(1, `hsl(${24 + fv * 12}, ${42 + fv * 20}%, ${13 + pulse * 40}%)`);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
-    // 별 (3층 패럴랙스 — 아래로 흐름)
-    const t = performance.now() / 1000;
+    // 밤하늘 별
     for (const s of stars) {
-      const sp = [6, 13, 26][s.L];
-      const y = (s.y + t * sp) % H;
-      const a = 0.25 + 0.45 * (0.5 + 0.5 * Math.sin(t * 2 + s.tw)) * (s.L + 1) / 3;
-      ctx.fillStyle = `rgba(200,220,255,${a})`;
-      const r = (s.L + 1) * 0.7;
+      const sp = [3, 6, 11][s.L];
+      const y = (s.y + t * sp) % (H * 0.5); // 위쪽 절반만
+      const a = 0.18 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2 + s.tw)) * (s.L + 1) / 3;
+      ctx.fillStyle = `rgba(255,240,210,${a})`;
+      const r = (s.L + 1) * 0.6;
       ctx.fillRect(s.x, y, r, r);
     }
 
-    // 신스웨이브 바닥 그리드 (코어 소실점)
+    // 처마 밑 홍등 3개 (각 레인 위, 살랑살랑)
     ctx.save();
-    ctx.globalAlpha = 0.16 + pulse * 1.6 + fv * 0.1;
-    ctx.strokeStyle = '#7d4dff';
+    for (let l = 0; l < 3; l++) {
+      const cx = laneX[l] + laneW / 2 + Math.sin(t * 0.9 + l * 2.1) * 5;
+      const cy = Math.max(40, tubeTop - 46);
+      ctx.globalCompositeOperation = 'lighter';
+      const lg = ctx.createRadialGradient(cx, cy, 2, cx, cy, 46);
+      lg.addColorStop(0, LCOL[l].glow + (0.5 + pulse * 3) + ')');
+      lg.addColorStop(1, LCOL[l].glow + '0)');
+      ctx.fillStyle = lg;
+      ctx.beginPath(); ctx.arc(cx, cy, 46, 0, 7); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = LCOL[l].main;
+      ctx.beginPath(); ctx.ellipse(cx, cy, 9, 11, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,240,200,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(cx, cy - 11); ctx.lineTo(cx, 0); ctx.stroke();
+    }
+    ctx.restore();
+
+    // 나무 카운터 결 (소실점 바닥)
+    ctx.save();
+    ctx.globalAlpha = 0.14 + pulse * 1.2 + fv * 0.08;
+    ctx.strokeStyle = '#c98a4b';
     ctx.lineWidth = 1;
     const vy = coreY, vx = W / 2;
     for (let i = -5; i <= 5; i++) {
@@ -447,7 +473,7 @@
       ctx.lineTo(vx + i * W * 0.22, H + 40);
       ctx.stroke();
     }
-    const scroll = (t * 0.7) % 1;
+    const scroll = (t * 0.5) % 1;
     for (let i = 0; i < 5; i++) {
       const p = Math.pow((i + scroll) / 5, 1.8);
       const y = vy + p * (H - vy + 40);
@@ -519,7 +545,9 @@
       const col = orbCol(v);
       const wob = Math.sin(t * 3 + v.ph) * 1.5;
       const yy = v.y + wob;
-      drawOrb(v.x, yy, v.r, col, v.size, t + v.ph);
+      // 줄이 찰수록 손님들이 화남 (낙하 중엔 아직 태평)
+      const anger = v.falling ? 0 : (game.lanes[v.lane] ? game.lanes[v.lane].fill / C.CAP : 0);
+      drawOrb(v.x, yy, v.r, col, v.size, t + v.ph, anger, v.gold);
       // 골드: 증발 카운트다운 링
       if (v.gold && v.expire > 0 && game.alive) {
         const remain = clamp((v.expire - game.t) / C.GOLD.life, 0, 1);
@@ -543,57 +571,103 @@
           const sq = 1 - p * 0.5;
           ctx.save();
           ctx.translate(v.x, v.y);
-          ctx.scale(sq, 1 + p * 0.55); // 늘어나며 빨려듦
-          drawOrb(0, 0, v.r, orbCol(v), v.size, performance.now() / 1000);
+          ctx.scale(sq, 1 + p * 0.55); // 라면 받으러 쏙 들어감
+          drawOrb(0, 0, v.r, orbCol(v), v.size, performance.now() / 1000, 0, v.gold); // 서빙받는 중 = 행복
           ctx.restore();
         }
       }
     }
   }
 
-  function drawOrb(x, y, r, col, size, t) {
+  // 얼굴 한 개 (눈+입) — anger: 0 평온 ~ 1 분노
+  function drawFace(fx, fy, s, anger, t, gold) {
+    const blink = Math.sin(t * 1.3) > 0.97 ? 0.2 : 1; // 가끔 깜빡
+    ctx.fillStyle = '#3b2a1a';
+    if (gold) { // 먹방 BJ: 선글라스
+      ctx.fillRect(fx - s * 0.62, fy - s * 0.30, s * 0.5, s * 0.3);
+      ctx.fillRect(fx + s * 0.12, fy - s * 0.30, s * 0.5, s * 0.3);
+      ctx.fillRect(fx - s * 0.2, fy - s * 0.24, s * 0.4, s * 0.1);
+    } else if (anger > 0.85) { // 분노: 치켜뜬 눈썹눈
+      ctx.lineWidth = s * 0.13; ctx.strokeStyle = '#3b2a1a';
+      ctx.beginPath(); ctx.moveTo(fx - s * 0.5, fy - s * 0.34); ctx.lineTo(fx - s * 0.14, fy - s * 0.12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx + s * 0.5, fy - s * 0.34); ctx.lineTo(fx + s * 0.14, fy - s * 0.12); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(fx - s * 0.3, fy - s * 0.18, s * 0.11, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(fx + s * 0.3, fy - s * 0.18, s * 0.11 * blink, 0, 7); ctx.fill();
+    }
+    // 입
+    ctx.lineWidth = Math.max(1.2, s * 0.1); ctx.strokeStyle = '#3b2a1a';
+    ctx.beginPath();
+    if (anger > 0.85) { ctx.arc(fx, fy + s * 0.42, s * 0.22, Math.PI, 0); } // 뒤집힌 울상+벌린 입
+    else if (anger > 0.55) { ctx.moveTo(fx - s * 0.22, fy + s * 0.3); ctx.lineTo(fx + s * 0.22, fy + s * 0.3); } // 일자
+    else { ctx.arc(fx, fy + s * 0.18, s * 0.26, 0.25, Math.PI - 0.25); } // 미소
+    ctx.stroke();
+    if (anger > 0.85) { // 분노 홍조
+      ctx.fillStyle = 'rgba(255,80,80,0.45)';
+      ctx.beginPath(); ctx.arc(fx - s * 0.5, fy + s * 0.12, s * 0.14, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(fx + s * 0.5, fy + s * 0.12, s * 0.14, 0, 7); ctx.fill();
+    }
+  }
+
+  // 손님 그리기 — size 1/2/3 = 얼굴 1/2/3개 (혼밥러/커플/단체)
+  function drawOrb(x, y, r, col, size, t, anger = 0, gold = false) {
+    const jit = anger > 0.85 ? Math.sin(t * 40) * r * 0.05 : 0; // 분노 부들부들
+    x += jit;
     ctx.save();
+    // 따뜻한 할로
     ctx.globalCompositeOperation = 'lighter';
-    // 할로
-    const g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2.2);
-    g.addColorStop(0, col.glow + '0.5)');
+    const g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2);
+    g.addColorStop(0, col.glow + (gold ? '0.55)' : '0.35)'));
     g.addColorStop(1, col.glow + '0)');
     ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, 7); ctx.fill();
-    // 본체
+    ctx.beginPath(); ctx.arc(x, y, r * 2, 0, 7); ctx.fill();
+    ctx.restore();
+    // 몸통 (불투명 — 얼굴이 잘 보이게)
     const g2 = ctx.createRadialGradient(x - r * 0.3, y - r * 0.35, r * 0.1, x, y, r);
-    g2.addColorStop(0, '#ffffff');
-    g2.addColorStop(0.35, col.main);
-    g2.addColorStop(1, col.glow + '0.25)');
+    g2.addColorStop(0, '#fff6e0');
+    g2.addColorStop(0.42, col.main);
+    g2.addColorStop(1, col.main);
     ctx.fillStyle = g2;
     ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
-    // 회전 에너지 링
-    ctx.strokeStyle = col.glow + '0.7)';
+    ctx.strokeStyle = 'rgba(60,30,10,0.35)';
     ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.ellipse(x, y, r * 1.15, r * 0.4, (t * 1.7) % 7, 0, 7);
-    ctx.stroke();
-    if (size === 3) { // L 오브: 링 하나 더 + 점수 암시
-      ctx.beginPath();
-      ctx.ellipse(x, y, r * 1.3, r * 0.5, (-t * 1.2) % 7, 0, 7);
-      ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
+    // 얼굴들
+    if (size === 1) drawFace(x, y, r * 0.75, anger, t, gold);
+    else if (size === 2) {
+      drawFace(x - r * 0.42, y, r * 0.5, anger, t, gold);
+      drawFace(x + r * 0.42, y + r * 0.06, r * 0.5, anger, t + 3, gold);
+    } else {
+      drawFace(x - r * 0.45, y + r * 0.18, r * 0.42, anger, t, gold);
+      drawFace(x + r * 0.45, y + r * 0.18, r * 0.42, anger, t + 3, gold);
+      drawFace(x, y - r * 0.4, r * 0.42, anger, t + 5, gold);
     }
-    ctx.restore();
+    // 분노 김
+    if (anger > 0.85 && Math.random() < 0.25) {
+      ctx.font = `${Math.round(r * 0.55)}px serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('💢', x + r * 0.9, y - r * 0.8);
+    }
+    if (gold) { // BJ 별
+      ctx.font = `${Math.round(r * 0.7)}px serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('⭐', x, y - r * 1.25);
+    }
   }
 
   function drawGate() {
     const gx = laneX[0] + laneW / 2 + game.gate.x * laneW;
     const t = performance.now() / 1000;
     const draining = game.drain && !game.gate.moving;
-    const R = laneW * 0.34 * (1 + gateKick * 0.14); // 펌핑 시 링 펀치
+    const R = laneW * 0.34 * (1 + gateKick * 0.14); // 빨리빨리 연타 시 펀치
     ctx.save();
-    // 게이트 → 코어 빔
+    // 서빙 김 (카운터 → 돈통으로 올라가는 온기)
     if (draining) {
       const col = SIZE_COL[game.drain.size];
       ctx.globalCompositeOperation = 'lighter';
       const bg = ctx.createLinearGradient(0, gateY, 0, coreY);
-      bg.addColorStop(0, col.glow + '0.55)');
-      bg.addColorStop(1, col.glow + '0.05)');
+      bg.addColorStop(0, col.glow + '0.45)');
+      bg.addColorStop(1, col.glow + '0.04)');
       ctx.fillStyle = bg;
       const bw = 7 + Math.sin(t * 30) * 2 + game.drain.size * 2;
       ctx.beginPath();
@@ -601,7 +675,7 @@
       ctx.lineTo(W / 2 + bw * 0.6, coreY); ctx.lineTo(W / 2 - bw * 0.6, coreY);
       ctx.fill();
     }
-    // 링
+    // 카운터 글로우 + 서빙 창구 링
     ctx.globalCompositeOperation = 'lighter';
     const spin = t * (draining ? 6 : 1.6);
     const col = game.gate.moving ? 'rgba(255,255,255,' : LCOL[clamp(Math.round(game.gate.x), 0, 2)].glow;
@@ -616,9 +690,6 @@
     ctx.lineDashOffset = -spin * 22;
     ctx.beginPath(); ctx.arc(gx, gateY, R, 0, 7); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = col + '0.5)';
-    ctx.beginPath(); ctx.arc(gx, gateY, R * 0.68, 0, 7); ctx.stroke();
     // 배출 진행 호
     if (draining) {
       ctx.lineWidth = 4.5;
@@ -628,23 +699,40 @@
       ctx.stroke();
     }
     ctx.restore();
+    // 라면 그릇 (사장님의 서빙 창구)
+    ctx.font = `${Math.round(R * 1.05)}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const bob = draining ? Math.sin(t * 26) * 2.5 : Math.sin(t * 2.2) * 1.5;
+    ctx.fillText('🍜', gx, gateY + bob);
+    ctx.textBaseline = 'alphabetic';
+    // 서빙 중 김 모락모락
+    if (draining && Math.random() < 0.35) {
+      suck(gx + rnd(-R * 0.5, R * 0.5), gateY - R * 0.6, gx, gateY - R * 1.8, 'rgba(255,250,235,');
+    }
   }
 
   function drawCore() {
     const t = performance.now() / 1000;
     const beat = beatPhase();
     const pulse = Math.pow(1 - beat, 1.6);
-    const R = 26 + Math.min(24, game.combo * 1.2) + pulse * 5 + feverGlow * 6;
+    const R = 24 + Math.min(22, game.combo * 1.1) + pulse * 5 + feverGlow * 6;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    const cg = ctx.createRadialGradient(W / 2, coreY, 2, W / 2, coreY, R * 2.6);
-    const hue = 190 + Math.sin(t * 0.7) * 25 + feverGlow * 100;
-    cg.addColorStop(0, `hsla(${hue}, 100%, 80%, 0.95)`);
-    cg.addColorStop(0.35, `hsla(${hue}, 95%, 60%, 0.45)`);
+    // 돈통 — 장사가 잘될수록(콤보) 환해짐
+    const cg = ctx.createRadialGradient(W / 2, coreY, 2, W / 2, coreY, R * 2.4);
+    const hue = 42 + Math.sin(t * 0.7) * 8 + feverGlow * 14;
+    cg.addColorStop(0, `hsla(${hue}, 100%, 78%, 0.9)`);
+    cg.addColorStop(0.35, `hsla(${hue}, 95%, 58%, 0.4)`);
     cg.addColorStop(1, `hsla(${hue}, 90%, 50%, 0)`);
     ctx.fillStyle = cg;
-    ctx.beginPath(); ctx.arc(W / 2, coreY, R * 2.6, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(W / 2, coreY, R * 2.4, 0, 7); ctx.fill();
     ctx.restore();
+    ctx.font = `${Math.round(R * 0.95)}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('💰', W / 2, coreY + Math.sin(t * 2.6) * 2);
+    ctx.textBaseline = 'alphabetic';
   }
 
   function drawParticles() {
@@ -681,29 +769,29 @@
 
   function drawHud() {
     ctx.textAlign = 'center';
-    // 점수
+    // 오늘 매출
     const s = Math.round(scoreShown);
-    ctx.font = `800 ${Math.min(40, W * 0.09)}px -apple-system,sans-serif`;
+    ctx.font = `800 ${Math.min(38, W * 0.085)}px -apple-system,sans-serif`;
     ctx.fillStyle = '#fff';
-    ctx.shadowColor = 'rgba(120,180,255,0.8)'; ctx.shadowBlur = 14;
-    ctx.fillText(s.toLocaleString(), W / 2, 46);
+    ctx.shadowColor = 'rgba(255,200,90,0.8)'; ctx.shadowBlur = 14;
+    ctx.fillText(won(s), W / 2, 46);
     ctx.shadowBlur = 0;
-    // 베스트
+    // 최고 매출
     ctx.font = '600 12px -apple-system,sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillText(`BEST ${best.toLocaleString()}`, W / 2, 64);
-    // 콤보 게이지
+    ctx.fillText(`최고 매출 ${(best * MON).toLocaleString()}원`, W / 2, 64);
+    // 연속 서빙 게이지
     if (game.combo >= 2 && mode === 'playing') {
       const mult = Core.comboMult(game.combo);
       const remain = clamp(1 - (game.t - game.lastDrainT) / C.COMBO_WINDOW, 0, 1);
       const bw = W * 0.4;
       ctx.fillStyle = 'rgba(255,255,255,0.12)';
       roundRect(W / 2 - bw / 2, 72, bw, 6, 3); ctx.fill();
-      ctx.fillStyle = feverGlow > 0.5 ? '#ffd166' : '#7dffb1';
+      ctx.fillStyle = feverGlow > 0.5 ? '#ffd166' : '#9dff8a';
       roundRect(W / 2 - bw / 2, 72, bw * remain, 6, 3); ctx.fill();
       ctx.font = '800 14px -apple-system,sans-serif';
-      ctx.fillStyle = feverGlow > 0.5 ? '#ffd166' : '#7dffb1';
-      ctx.fillText(`🔥 ${game.combo} COMBO  ×${mult}`, W / 2, 96);
+      ctx.fillStyle = feverGlow > 0.5 ? '#ffd166' : '#9dff8a';
+      ctx.fillText(`🔥 ${game.combo}연속 서빙  팁 ×${mult}`, W / 2, 96);
     }
   }
 
@@ -732,7 +820,7 @@
 
   // ── DOM 연결 ──
   document.getElementById('btn-start').addEventListener('click', startGame);
-  document.getElementById('best-label').textContent = best > 0 ? `최고 기록 ${best.toLocaleString()}점` : '';
+  document.getElementById('best-label').textContent = best > 0 ? `최고 매출 ${(best * MON).toLocaleString()}원` : '';
 
   // 음소거 토글
   const muteBtn = document.getElementById('btn-mute');
@@ -746,10 +834,10 @@
   const shareBtn = document.getElementById('btn-share');
   shareBtn.addEventListener('click', async () => {
     const score = game ? game.score : 0;
-    const text = `🚦 GATEWAY ${score.toLocaleString()}점! 세 레인 동시에 막아봐 ㅋㅋ`;
+    const text = `🍜 라면집 매출 ${(score * MON).toLocaleString()}원! 나보다 장사 잘해봐 ㅋㅋ`;
     try {
       if (navigator.share && isMobile()) {
-        await navigator.share({ title: 'GATEWAY', text, url: SITE });
+        await navigator.share({ title: '라면집 사장님', text, url: SITE });
       } else {
         await navigator.clipboard.writeText(`${text}\n${SITE}`);
         shareBtn.textContent = '✅ 복사 완료! 카톡에 붙여넣기';

@@ -3,28 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0a0820">
+<meta name="theme-color" content="#150c08">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GATEWAY">
+<meta name="apple-mobile-web-app-title" content="라면집 사장님">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta property="og:type" content="website">
-<meta property="og:title" content="🚦 GATEWAY — 세 레인, 게이트는 하나">
-<meta property="og:description" content="쏟아지는 에너지 오브, 출구는 단 하나. 어느 레인을 열고 언제 옮길까? 머리와 손이 동시에 바빠지는 원터치 관제 게임">
+<meta property="og:title" content="🍜 라면집 사장님 — 밀려드는 손님, 사장은 하나">
+<meta property="og:description" content="세 줄로 밀려드는 손님, 서빙은 한 줄씩만. 연타로 빨리빨리! 줄이 터지면 가게도 끝. 화난 손님들 사이에서 살아남는 원터치 장사 게임">
 <meta property="og:image" content="https://junhee1219.github.io/gateway/og/main.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://junhee1219.github.io/gateway/">
 <meta name="twitter:card" content="summary_large_image">
-<title>🚦 GATEWAY — 합류 관문</title>
+<title>🍜 라면집 사장님</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; }
   body {
-    background: #0a0820;
+    background: #150c08;
     font-family: -apple-system, "Segoe UI", "Apple SD Gothic Neo", sans-serif;
     user-select: none; -webkit-user-select: none;
     touch-action: none; -webkit-touch-callout: none;
@@ -46,17 +46,17 @@
     position: fixed; inset: 0; z-index: 20;
     display: none; flex-direction: column; align-items: center; justify-content: center;
     text-align: center; padding: 28px;
-    background: radial-gradient(ellipse at 50% 30%, rgba(60,40,140,0.45), rgba(6,5,22,0.92) 70%);
+    background: radial-gradient(ellipse at 50% 30%, rgba(140,70,30,0.4), rgba(18,9,5,0.93) 70%);
     backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
   }
   body.show-overlay #overlay { display: flex; }
   /* 이모지는 그라데이션 텍스트에 넣으면 실루엣이 되므로 별도 요소 */
-  #ov-emoji { font-size: 42px; margin-bottom: 2px; filter: drop-shadow(0 0 14px rgba(150,120,255,0.5)); }
+  #ov-emoji { font-size: 46px; margin-bottom: 2px; filter: drop-shadow(0 0 14px rgba(255,170,80,0.55)); }
   #overlay h1 {
-    font-size: clamp(30px, 8.5vw, 44px); font-weight: 800; letter-spacing: 2px;
-    background: linear-gradient(110deg, #27e8ff, #c47bff 50%, #ffb347);
+    font-size: clamp(28px, 8vw, 42px); font-weight: 800; letter-spacing: 1px;
+    background: linear-gradient(110deg, #ff6b6b, #ffa94d 50%, #ffe066);
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 0 18px rgba(150,120,255,0.55));
+    filter: drop-shadow(0 0 18px rgba(255,150,60,0.5));
     margin-bottom: 14px;
   }
   #ov-msg { font-size: 15.5px; line-height: 1.65; color: #cfd2ff; margin-bottom: 8px; }
@@ -84,12 +84,12 @@
 
   #btn-start {
     margin-top: 14px; padding: 15px 52px; font-size: 19px; font-weight: 800;
-    color: #0a0820; border: none; border-radius: 999px; cursor: pointer;
-    background: linear-gradient(110deg, #27e8ff, #7dffb1);
-    box-shadow: 0 0 26px rgba(60,230,255,0.45), 0 4px 14px rgba(0,0,0,0.4);
+    color: #2b1205; border: none; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(110deg, #ffa94d, #ffe066);
+    box-shadow: 0 0 26px rgba(255,170,70,0.45), 0 4px 14px rgba(0,0,0,0.4);
     animation: breathe 2.2s ease-in-out infinite;
   }
-  @keyframes breathe { 50% { box-shadow: 0 0 40px rgba(60,230,255,0.75), 0 4px 14px rgba(0,0,0,0.4); transform: scale(1.03); } }
+  @keyframes breathe { 50% { box-shadow: 0 0 40px rgba(255,170,70,0.75), 0 4px 14px rgba(0,0,0,0.4); transform: scale(1.03); } }
   #btn-start:active { transform: scale(0.96); }
   #btn-share {
     margin-top: 12px; padding: 10px 22px; font-size: 14px; font-weight: 600;
@@ -138,16 +138,16 @@
   <button id="btn-mute" aria-label="소리 켜기/끄기">🔊</button>
 
   <div id="overlay">
-    <div id="ov-emoji">🚦</div>
-    <h1>GATEWAY</h1>
-    <p id="ov-msg">쏟아지는 에너지 오브, 출구는 단 하나.<br>레인이 가득 차 넘치면 끝!</p>
+    <div id="ov-emoji">🍜</div>
+    <h1>라면집 사장님</h1>
+    <p id="ov-msg">밀려드는 손님, 사장은 하나.<br>줄이 꽉 차서 터지면 가게도 끝!</p>
     <div id="howto">
-      <div class="step"><b>👆</b>레인 탭하면<br>게이트 이동</div>
-      <div class="step"><b>⚡</b>같은 레인 연타<br>= 빨리 배출!</div>
-      <div class="step"><b>✨</b>골드는 5배!<br>늦으면 증발</div>
+      <div class="step"><b>👆</b>줄을 탭하면<br>그쪽으로 서빙</div>
+      <div class="step"><b>⚡</b>연타하면<br>빨리빨리!</div>
+      <div class="step"><b>⭐</b>먹방 BJ는 5배!<br>늦으면 악평</div>
     </div>
     <div id="best-label"></div>
-    <button id="btn-start">시작!</button>
+    <button id="btn-start">개업!</button>
     <button id="btn-share">📤 친구에게 자랑하기</button>
     <div id="snack">
       <span class="snack-label">재밌었다면 개발자 간식 사주기</span> 🍩
