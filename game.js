@@ -32,14 +32,22 @@
   }
 
   // ── 배경 ──
-  let stars = [];
+  let stars = [], buildings = [];
   function initStars() {
     stars = [];
     for (let L = 0; L < 3; L++) {
-      const n = [50, 32, 18][L];
+      const n = [40, 26, 14][L];
       for (let i = 0; i < n; i++) {
         stars.push({ x: Math.random() * W, y: Math.random() * H, L, tw: Math.random() * Math.PI * 2 });
       }
+    }
+    // 지평선 건물 실루엣 (결정적 배치)
+    buildings = [];
+    let bx = -20, i = 0;
+    while (bx < W + 40) {
+      const bw = 34 + ((i * 53) % 46);
+      buildings.push({ x: bx, w: bw, h: 34 + ((i * 97) % 64), seed: i });
+      bx += bw + 5; i++;
     }
   }
 
@@ -424,34 +432,60 @@
     const pulse = Math.pow(1 - beat, 2) * 0.05; // 비트마다 살짝 밝아짐
     const t = performance.now() / 1000;
     const fv = feverGlow;
-    // 밤거리 — 깊은 남색에서 노을빛 바닥으로
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, `hsl(${228 + fv * 10}, 38%, ${7 + pulse * 26}%)`);
-    g.addColorStop(0.65, `hsl(${16 + fv * 10}, ${30 + fv * 20}%, ${9 + pulse * 30}%)`);
-    g.addColorStop(1, `hsl(${24 + fv * 12}, ${42 + fv * 20}%, ${13 + pulse * 40}%)`);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const hz = Math.max(70, tubeTop - 26); // 지평선
 
-    // 밤하늘 별
+    // 해질녘 하늘 (시커멓지 않게!)
+    const sky = ctx.createLinearGradient(0, 0, 0, hz);
+    sky.addColorStop(0, `hsl(${262 + fv * 8}, 36%, ${24 + pulse * 30}%)`);
+    sky.addColorStop(0.6, `hsl(${352 + fv * 6}, 44%, ${37 + pulse * 30}%)`);
+    sky.addColorStop(1, `hsl(${26 + fv * 6}, ${62 + fv * 15}%, ${48 + pulse * 30}%)`);
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, hz);
+
+    // 초저녁 별
     for (const s of stars) {
-      const sp = [3, 6, 11][s.L];
-      const y = (s.y + t * sp) % (H * 0.5); // 위쪽 절반만
-      const a = 0.18 + 0.35 * (0.5 + 0.5 * Math.sin(t * 2 + s.tw)) * (s.L + 1) / 3;
-      ctx.fillStyle = `rgba(255,240,210,${a})`;
-      const r = (s.L + 1) * 0.6;
-      ctx.fillRect(s.x, y, r, r);
+      const y = (s.y * 0.4 + t * [2, 4, 7][s.L]) % (hz * 0.7);
+      const a = 0.15 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2 + s.tw)) * (s.L + 1) / 3;
+      ctx.fillStyle = `rgba(255,244,220,${a})`;
+      ctx.fillRect(s.x, y, (s.L + 1) * 0.6, (s.L + 1) * 0.6);
     }
 
-    // 처마 밑 홍등 3개 (각 레인 위, 살랑살랑)
+    // 건물 실루엣 + 창문 불빛
+    ctx.fillStyle = 'rgba(40,24,52,0.9)';
+    for (const b of buildings) ctx.fillRect(b.x, hz - b.h, b.w, b.h);
+    ctx.fillStyle = 'rgba(255,214,120,0.6)';
+    for (const b of buildings) {
+      for (let k = 0; k < 4; k++) {
+        if ((b.seed * 7 + k * 3) % 5 < 2) continue;
+        ctx.fillRect(b.x + 6 + (k % 2) * 14, hz - b.h + 8 + Math.floor(k / 2) * 16, 6, 8);
+      }
+    }
+
+    // 골목 바닥 (가게 앞)
+    const gnd = ctx.createLinearGradient(0, hz, 0, H);
+    gnd.addColorStop(0, `hsl(18, 30%, ${30 + pulse * 20}%)`);
+    gnd.addColorStop(1, `hsl(14, 32%, ${17 + pulse * 16}%)`);
+    ctx.fillStyle = gnd; ctx.fillRect(0, hz, W, H - hz);
+    // 가게 불빛이 바닥에 번짐
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const wash = ctx.createRadialGradient(W / 2, gateY + 26, 10, W / 2, gateY + 26, W * 0.75);
+    wash.addColorStop(0, `rgba(255,186,96,${0.20 + pulse * 1.5 + fv * 0.08})`);
+    wash.addColorStop(1, 'rgba(255,186,96,0)');
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, hz, W, H - hz);
+    ctx.restore();
+
+    // 전선에 매달린 홍등 3개 (각 줄 위)
     ctx.save();
     for (let l = 0; l < 3; l++) {
       const cx = laneX[l] + laneW / 2 + Math.sin(t * 0.9 + l * 2.1) * 5;
-      const cy = Math.max(40, tubeTop - 46);
+      const cy = Math.max(40, tubeTop - 48);
       ctx.globalCompositeOperation = 'lighter';
-      const lg = ctx.createRadialGradient(cx, cy, 2, cx, cy, 46);
+      const lg = ctx.createRadialGradient(cx, cy, 2, cx, cy, 44);
       lg.addColorStop(0, LCOL[l].glow + (0.5 + pulse * 3) + ')');
       lg.addColorStop(1, LCOL[l].glow + '0)');
       ctx.fillStyle = lg;
-      ctx.beginPath(); ctx.arc(cx, cy, 46, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 44, 0, 7); ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
       ctx.fillStyle = LCOL[l].main;
       ctx.beginPath(); ctx.ellipse(cx, cy, 9, 11, 0, 0, 7); ctx.fill();
@@ -461,78 +495,78 @@
     }
     ctx.restore();
 
-    // 나무 카운터 결 (소실점 바닥)
-    ctx.save();
-    ctx.globalAlpha = 0.14 + pulse * 1.2 + fv * 0.08;
-    ctx.strokeStyle = '#c98a4b';
-    ctx.lineWidth = 1;
-    const vy = coreY, vx = W / 2;
-    for (let i = -5; i <= 5; i++) {
+    // 가게 차양 (빨강·크림 스캘럽) — 카운터 위
+    const awnTop = gateY - 50, awnH = 22, sc = 13;
+    for (let x = 0, i = 0; x < W; x += 26, i++) {
+      ctx.fillStyle = i % 2 ? '#f3e2c4' : '#e8453c';
+      ctx.fillRect(x, awnTop, 26, awnH);
       ctx.beginPath();
-      ctx.moveTo(vx, vy);
-      ctx.lineTo(vx + i * W * 0.22, H + 40);
-      ctx.stroke();
+      ctx.arc(x + 13, awnTop + awnH, sc, 0, Math.PI);
+      ctx.fill();
     }
-    const scroll = (t * 0.5) % 1;
-    for (let i = 0; i < 5; i++) {
-      const p = Math.pow((i + scroll) / 5, 1.8);
-      const y = vy + p * (H - vy + 40);
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    }
-    ctx.restore();
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; // 차양 그림자
+    ctx.fillRect(0, awnTop + awnH + sc, W, 5);
   }
 
   function drawLanes() {
+    const t = performance.now() / 1000;
     for (let l = 0; l < 3; l++) {
       const x = laneX[l], cx = laneCenter(l);
       const fill = game.lanes[l].fill / C.CAP;
       const proj = Core.projectedFill(game, l) / C.CAP;
-      const col = LCOL[l];
       const hot = fill >= 0.8;
       const alarm = hot ? 0.5 + 0.5 * Math.sin(performance.now() / 90) : 0;
+      const active = l === currentGateLane();
 
-      // 튜브 배경
-      ctx.fillStyle = 'rgba(8,10,30,0.55)';
-      roundRect(x + 4, tubeTop - 8, laneW - 8, tubeBot - tubeTop + 16, 14);
+      // 대기줄 바닥 매트 (밝은 카펫 — 가게 앞 줄서기 자리)
+      ctx.fillStyle = hot
+        ? `rgba(255,90,70,${0.16 + alarm * 0.14})`
+        : `rgba(255,232,190,${active ? 0.14 : 0.08})`;
+      roundRect(x + 6, tubeTop - 6, laneW - 12, tubeBot - tubeTop + 18, 12);
       ctx.fill();
 
-      // 압력 글로우 (바닥에서 차오름)
-      const fy = tubeBot - fill * (tubeBot - tubeTop);
-      const grad = ctx.createLinearGradient(0, tubeBot, 0, fy);
-      grad.addColorStop(0, col.glow + (0.30 + alarm * 0.3) + ')');
-      grad.addColorStop(1, col.glow + '0.04)');
-      ctx.fillStyle = grad;
-      roundRect(x + 4, fy, laneW - 8, tubeBot - fy + 8, 10);
-      ctx.fill();
+      // 줄 안내 중앙 점선 (바닥 페인트)
+      ctx.setLineDash([5, 12]);
+      ctx.strokeStyle = 'rgba(255,240,210,0.20)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cx, tubeTop + 8); ctx.lineTo(cx, tubeBot); ctx.stroke();
+      ctx.setLineDash([]);
 
-      // 고스트 (낙하 중 포함 예상 압력)
-      if (proj > fill) {
-        const py = tubeBot - proj * (tubeBot - tubeTop);
-        ctx.fillStyle = col.glow + '0.07)';
-        roundRect(x + 4, py, laneW - 8, fy - py, 8);
-        ctx.fill();
-      }
+      // 차단봉 + 로프 (양옆)
+      const postYs = [tubeTop + 2, (tubeTop + tubeBot) / 2, tubeBot - 2];
+      [x + 11, x + laneW - 11].forEach((px) => {
+        // 로프 (살짝 처진 곡선)
+        ctx.strokeStyle = hot ? `rgba(255,120,90,${0.6 + alarm * 0.3})` : 'rgba(222,178,108,0.65)';
+        ctx.lineWidth = 2;
+        for (let k = 0; k < postYs.length - 1; k++) {
+          ctx.beginPath();
+          ctx.moveTo(px, postYs[k] - 8);
+          ctx.quadraticCurveTo(px + (px < cx ? 4 : -4), (postYs[k] + postYs[k + 1]) / 2, px, postYs[k + 1] - 8);
+          ctx.stroke();
+        }
+        // 봉
+        postYs.forEach((py) => {
+          ctx.strokeStyle = '#caa257';
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(px, py - 8); ctx.lineTo(px, py + 6); ctx.stroke();
+          ctx.fillStyle = '#e8c878';
+          ctx.beginPath(); ctx.arc(px, py - 9, 3.2, 0, 7); ctx.fill();
+        });
+      });
 
-      // 네온 테두리
-      ctx.strokeStyle = hot ? `rgba(255,80,80,${0.55 + alarm * 0.45})` : col.glow + (l === currentGateLane() ? '0.8)' : '0.30)');
-      ctx.lineWidth = l === currentGateLane() ? 2.5 : 1.5;
-      roundRect(x + 4, tubeTop - 8, laneW - 8, tubeBot - tubeTop + 16, 14);
-      ctx.stroke();
+      // 만석 위험선 (줄 맨 끝 — 도로 침범 금지선)
+      ctx.setLineDash([10, 8]);
+      ctx.lineWidth = hot ? 5 + alarm * 2 : 3;
+      ctx.strokeStyle = hot ? `rgba(255,70,60,${0.7 + alarm * 0.3})` : 'rgba(255,200,70,0.45)';
+      ctx.beginPath(); ctx.moveTo(x + 12, tubeTop - 12); ctx.lineTo(x + laneW - 12, tubeTop - 12); ctx.stroke();
+      ctx.setLineDash([]);
 
-      // 용량 눈금
-      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-      ctx.lineWidth = 1;
-      for (let u = 1; u < C.CAP; u++) {
-        const y = tubeBot - u * unitH;
-        ctx.beginPath(); ctx.moveTo(x + 10, y); ctx.lineTo(x + laneW - 10, y); ctx.stroke();
-      }
-
-      // % 라벨 (튜브 안쪽 상단 — 콤보 HUD와 겹치지 않게)
+      // 줄 포화도 라벨
       const pct = Math.round(proj * 100);
       ctx.font = `bold ${hot ? 15 : 12}px -apple-system,sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillStyle = hot ? `rgba(255,${120 - alarm * 60},${120 - alarm * 60},0.95)` : 'rgba(255,255,255,0.45)';
-      ctx.fillText((hot ? '⚠ ' : '') + pct + '%', cx, tubeTop + 12);
+      ctx.fillStyle = hot ? `rgba(255,${130 - alarm * 60},${110 - alarm * 60},1)` : 'rgba(255,248,230,0.55)';
+      ctx.fillText((hot ? '⚠ ' : '') + pct + '%', cx, tubeTop + 14);
     }
   }
 
@@ -659,14 +693,15 @@
     const gx = laneX[0] + laneW / 2 + game.gate.x * laneW;
     const t = performance.now() / 1000;
     const draining = game.drain && !game.gate.moving;
-    const R = laneW * 0.34 * (1 + gateKick * 0.14); // 빨리빨리 연타 시 펀치
+    const kick = 1 + gateKick * 0.14; // 빨리빨리 연타 시 들썩
+    const R = laneW * 0.3;
     ctx.save();
-    // 서빙 김 (카운터 → 돈통으로 올라가는 온기)
+    // 서빙 온기 (창구 → 돈통)
     if (draining) {
       const col = SIZE_COL[game.drain.size];
       ctx.globalCompositeOperation = 'lighter';
       const bg = ctx.createLinearGradient(0, gateY, 0, coreY);
-      bg.addColorStop(0, col.glow + '0.45)');
+      bg.addColorStop(0, col.glow + '0.4)');
       bg.addColorStop(1, col.glow + '0.04)');
       ctx.fillStyle = bg;
       const bw = 7 + Math.sin(t * 30) * 2 + game.drain.size * 2;
@@ -675,40 +710,74 @@
       ctx.lineTo(W / 2 + bw * 0.6, coreY); ctx.lineTo(W / 2 - bw * 0.6, coreY);
       ctx.fill();
     }
-    // 카운터 글로우 + 서빙 창구 링
+    // 활성 창구 따뜻한 글로우
     ctx.globalCompositeOperation = 'lighter';
-    const spin = t * (draining ? 6 : 1.6);
     const col = game.gate.moving ? 'rgba(255,255,255,' : LCOL[clamp(Math.round(game.gate.x), 0, 2)].glow;
-    const hg = ctx.createRadialGradient(gx, gateY, R * 0.3, gx, gateY, R * 2);
-    hg.addColorStop(0, col + '0.35)');
+    const hg = ctx.createRadialGradient(gx, gateY + 4, R * 0.3, gx, gateY + 4, R * 2.1);
+    hg.addColorStop(0, col + '0.4)');
     hg.addColorStop(1, col + '0)');
     ctx.fillStyle = hg;
-    ctx.beginPath(); ctx.arc(gx, gateY, R * 2, 0, 7); ctx.fill();
-    ctx.lineWidth = 3.5;
-    ctx.strokeStyle = col + '0.95)';
-    ctx.setLineDash([10, 7]);
-    ctx.lineDashOffset = -spin * 22;
-    ctx.beginPath(); ctx.arc(gx, gateY, R, 0, 7); ctx.stroke();
-    ctx.setLineDash([]);
-    // 배출 진행 호
-    if (draining) {
-      ctx.lineWidth = 4.5;
-      ctx.strokeStyle = SIZE_COL[game.drain.size].main;
-      ctx.beginPath();
-      ctx.arc(gx, gateY, R + 7, -Math.PI / 2, -Math.PI / 2 + game.drain.progress * Math.PI * 2);
-      ctx.stroke();
-    }
+    ctx.beginPath(); ctx.arc(gx, gateY + 4, R * 2.1, 0, 7); ctx.fill();
     ctx.restore();
-    // 라면 그릇 (사장님의 서빙 창구)
-    ctx.font = `${Math.round(R * 1.05)}px serif`;
+
+    // 나무 카운터 (가게 전면, 전체 폭)
+    ctx.fillStyle = '#7c4a22';
+    roundRect(8, gateY + 14, W - 16, 30, 8); ctx.fill();
+    ctx.fillStyle = 'rgba(255,220,160,0.28)';
+    roundRect(8, gateY + 14, W - 16, 6, 3); ctx.fill();
+
+    // 사장님 (활성 창구 위치로 미끄러져 다님)
+    const fr = laneW * 0.17 * kick;
+    const fy = gateY - 4 + (draining ? Math.sin(t * 24) * 1.6 : Math.sin(t * 2.4));
+    // 몸통 (흰 앞치마)
+    ctx.fillStyle = '#f5eee2';
+    roundRect(gx - fr * 1.1, fy + fr * 0.55, fr * 2.2, fr * 1.5, 6); ctx.fill();
+    // 얼굴
+    ctx.fillStyle = '#ffd9a8';
+    ctx.beginPath(); ctx.arc(gx, fy, fr, 0, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(90,50,20,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(gx, fy, fr, 0, 7); ctx.stroke();
+    // 흰 두건
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(gx, fy, fr, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.quadraticCurveTo(gx + fr * 0.6, fy - fr * 0.45, gx - fr * 0.98, fy - fr * 0.3);
+    ctx.fill();
+    ctx.fillStyle = '#e84a3c'; // 두건 띠
+    roundRect(gx - fr, fy - fr * 0.5, fr * 2, fr * 0.22, fr * 0.1); ctx.fill();
+    // 눈/입 — 서빙 중엔 집중, 평소엔 싱글벙글
+    ctx.fillStyle = '#3b2a1a';
+    ctx.strokeStyle = '#3b2a1a';
+    if (draining) {
+      ctx.lineWidth = fr * 0.13;
+      ctx.beginPath(); ctx.moveTo(gx - fr * 0.45, fy - fr * 0.05); ctx.lineTo(gx - fr * 0.15, fy - fr * 0.05); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(gx + fr * 0.15, fy - fr * 0.05); ctx.lineTo(gx + fr * 0.45, fy - fr * 0.05); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(gx - fr * 0.3, fy - fr * 0.08, fr * 0.1, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(gx + fr * 0.3, fy - fr * 0.08, fr * 0.1, 0, 7); ctx.fill();
+    }
+    ctx.lineWidth = fr * 0.11;
+    ctx.beginPath(); ctx.arc(gx, fy + fr * 0.3, fr * 0.26, 0.3, Math.PI - 0.3); ctx.stroke();
+
+    // 그릇 (카운터 위, 사장님 옆에서 김 모락)
+    ctx.font = `${Math.round(fr * 1.5)}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const bob = draining ? Math.sin(t * 26) * 2.5 : Math.sin(t * 2.2) * 1.5;
-    ctx.fillText('🍜', gx, gateY + bob);
+    ctx.fillText('🍜', gx + fr * 2.1, gateY + 24 + (draining ? Math.sin(t * 26) * 2 : 0));
     ctx.textBaseline = 'alphabetic';
+
+    // 서빙 진행 바 (카운터 위 게이지)
+    if (draining) {
+      const bwid = laneW * 0.62;
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      roundRect(gx - bwid / 2, gateY + 48, bwid, 7, 4); ctx.fill();
+      ctx.fillStyle = SIZE_COL[game.drain.size].main;
+      roundRect(gx - bwid / 2, gateY + 48, bwid * clamp(game.drain.progress, 0, 1), 7, 4); ctx.fill();
+    }
     // 서빙 중 김 모락모락
     if (draining && Math.random() < 0.35) {
-      suck(gx + rnd(-R * 0.5, R * 0.5), gateY - R * 0.6, gx, gateY - R * 1.8, 'rgba(255,250,235,');
+      suck(gx + rnd(-R * 0.5, R * 0.5), gateY - R * 0.7, gx, gateY - R * 2, 'rgba(255,250,235,');
     }
   }
 
