@@ -931,6 +931,15 @@
 
   // 서비스 워커 (localhost 개발 중엔 캐시 꼬임 방지를 위해 미등록)
   if ('serviceWorker' in navigator && location.protocol !== 'file:' && !/^(localhost|127\.)/.test(location.hostname)) {
+    // 새 SW가 컨트롤을 잡으면(=배포 업데이트) 시작 10초 이내일 때 한 번 자동 새로고침
+    // → 기존 유저도 한 번 접속만에 새 버전 (게임 중 리로드 방지 가드 포함)
+    const hadController = !!navigator.serviceWorker.controller;
+    let swRefreshed = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || swRefreshed || performance.now() > 10000) return;
+      swRefreshed = true;
+      location.reload();
+    });
     window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
   }
 
