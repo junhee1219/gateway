@@ -1,0 +1,128 @@
+/* ═══════════════════════════════════════════════════════════════
+   GAME-KIT ui.css — 미니게임 공용 컴포넌트 (빌드 없음, 복사해서 사용)
+
+   박제된 디자인 규칙 (vase 아트디렉팅 세션에서 확정):
+   1. 그라데이션: 색상(hue) 고정, 명도 폭 12% 이내 — 색이 흐르면 어색해진다
+   2. 빛 표현은 하나만 주인공: 크리스프한 윗 림 1줄 + 부드러운 하단 음영. 띠(banding) 금지
+   3. 바닥은 블러 없는 하드 섀도 1단 (+옅은 소프트 섀도) — 광원은 항상 상단
+   4. 외곽선: 버튼은 자기 색의 어두운 버전, 아이콘은 중립 다크(--k-ink) 단일색
+   5. 아이콘은 버튼 안에서 ~30% 여백 (안전영역)
+   6. 글리프(형태)는 직접 그리지 않는다 — Phosphor Fill(UI) / game-icons.net(오브젝트)
+   ═══════════════════════════════════════════════════════════════ */
+
+:root{
+  --k-ink:#1f2340;        /* 아이콘 중립 외곽선 */
+  --k-radius:17px;
+  --k-font:'Fredoka',system-ui,sans-serif;
+}
+
+/* ── 캔디 버튼 ─────────────────────────────────────────────── */
+.k-btn{
+  --top:#7d92f8; --bot:#4a59d2; --edge:#283069; --base:#1d2154;
+  position:relative; min-width:56px; min-height:48px; padding:0 16px;
+  border-radius:var(--k-radius); cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  border:2.5px solid var(--edge);
+  background:linear-gradient(180deg, var(--top) 0%,
+    color-mix(in srgb, var(--top) 50%, var(--bot)) 50%, var(--bot) 100%);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,.45),
+    inset 0 -9px 10px -7px rgba(0,0,10,.5),
+    0 5px 0 var(--base),
+    0 9px 14px rgba(0,0,20,.35);
+  font-family:var(--k-font); font-weight:700; font-size:16px; color:#fff;
+  text-shadow:0 1.5px 0 color-mix(in srgb, var(--base) 80%, transparent);
+  -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none;
+  transition:transform .09s, box-shadow .09s, filter .15s;
+}
+.k-btn:active{
+  transform:translateY(4px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,.35),
+    inset 0 -6px 8px -6px rgba(0,0,10,.5),
+    0 1px 0 var(--base),
+    0 3px 6px rgba(0,0,20,.3);
+}
+.k-btn:disabled{filter:saturate(.25) brightness(.7);cursor:default;}
+.k-btn.sq{padding:0;width:54px;}          /* 정사각(아이콘 전용) */
+.k-btn.lg{min-height:54px;font-size:18px;width:100%;}
+
+/* 버튼 색상 변주 — 전부 같은 명도 곡선 */
+.k-blue  {--top:#7d92f8;--bot:#4a59d2;--edge:#283069;--base:#1d2154;}
+.k-teal  {--top:#46e0cd;--bot:#149a8e;--edge:#0b5d54;--base:#06443c;}
+.k-coral {--top:#ff8a9b;--bot:#d83b50;--edge:#841e36;--base:#66132a;}
+.k-slate {--top:#9aa0d8;--bot:#666c9f;--edge:#393e6b;--base:#272b4e;}
+.k-violet{--top:#8677f5;--bot:#5638e8;--edge:#2c1d7e;--base:#1d1160;}
+.k-green {--top:#5fd97a;--bot:#27a348;--edge:#14602a;--base:#0e4a20;}
+.k-gold  {--top:#ffd36b;--bot:#e09a1f;--edge:#8a5a10;--base:#6b450c;}
+
+/* ── 아이콘 (sprite.svg의 <use>와 함께) ──────────────────────
+   <svg class="ki"><use href="#p-lightbulb"/></svg>
+   .ki   : 단색 글리프 (currentColor)
+   .ki-o : 외곽선 입힌 "사물" 버전 — 버튼 위에서 캔디 느낌
+   .g    : game-icons(512 박스)용 외곽선 두께 보정                    */
+.ki,.ki-o{width:24px;height:24px;fill:currentColor;flex:0 0 auto;}
+.ki-o{
+  fill:#fff; stroke:var(--k-ink); stroke-width:22; stroke-linejoin:round;
+  paint-order:stroke; filter:drop-shadow(0 1.5px 0 rgba(10,12,40,.35));
+}
+.ki-o.g{stroke-width:44;}
+.ki.sm,.ki-o.sm{width:18px;height:18px;}
+.ki.lg,.ki-o.lg{width:32px;height:32px;}
+
+/* ── 별점 ──────────────────────────────────────────────────── */
+.k-star{width:38px;height:38px;fill:#ffc24b;stroke:#8a4d12;stroke-width:14;
+  stroke-linejoin:round;paint-order:stroke;
+  filter:drop-shadow(0 2px 0 rgba(60,30,5,.3));}
+.k-star.off{fill:#3c3852;stroke:#23203a;filter:none;}
+
+/* ── 알약(상태 칩) ─────────────────────────────────────────── */
+.k-pill{
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);
+  backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;
+  font-size:12px;font-family:var(--k-font);color:inherit;
+}
+button.k-pill{cursor:pointer;transition:transform .12s;}
+button.k-pill:active{transform:scale(.93);}
+
+/* ── 모달 ──────────────────────────────────────────────────── */
+.k-modal{
+  position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:rgba(8,8,16,.62);backdrop-filter:blur(5px);animation:k-fadein .2s ease;
+}
+.k-modal.hidden{display:none;}
+.k-card{
+  background:var(--k-card-bg,#211d33);border:1px solid rgba(255,255,255,.14);
+  border-radius:26px;padding:24px 22px;width:min(350px,90vw);max-height:84dvh;overflow-y:auto;
+  box-shadow:0 18px 50px rgba(0,0,0,.5);text-align:center;
+  animation:k-pop .3s cubic-bezier(.2,1.2,.4,1);
+}
+.k-card h2{font-family:var(--k-font);font-size:20px;margin-bottom:12px;}
+@keyframes k-fadein{from{opacity:0;}to{opacity:1;}}
+@keyframes k-pop{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+/* ── 토스트 ────────────────────────────────────────────────── */
+.k-toast{
+  position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));
+  transform:translateX(-50%) translateY(20px);
+  background:rgba(20,20,30,.92);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(12px);
+  padding:11px 20px;border-radius:999px;font-size:14px;z-index:90;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;white-space:nowrap;color:#fff;
+}
+.k-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── 간식 사주기 (snack.js와 세트) ─────────────────────────── */
+.k-snack{margin-top:18px;font-size:12px;opacity:.85;}
+.k-snack .k-snack-btns{display:flex;gap:8px;justify-content:center;margin-top:9px;}
+.k-snack a{
+  display:inline-flex;align-items:center;gap:5px;text-decoration:none;font-weight:700;font-size:12px;
+  padding:6px 13px;border-radius:999px;transition:transform .15s;
+}
+.k-snack a:active{transform:scale(.94);}
+.k-snack a.toss{background:#3182f6;color:#fff;}
+.k-snack a.kakao{background:#fee500;color:#3c1e1e;}
+
+/* ── 아이콘 크레딧 (CC BY 표기 — 모달 하단 등에 배치) ───────── */
+.k-credit{font-size:10px;opacity:.45;margin-top:12px;font-family:var(--k-font);}
+.k-credit a{color:inherit;}

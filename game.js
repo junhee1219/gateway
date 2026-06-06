@@ -891,9 +891,12 @@
   document.getElementById('btn-start').addEventListener('click', startGame);
   document.getElementById('best-label').textContent = best > 0 ? `최고 매출 ${(best * MON).toLocaleString()}원` : '';
 
-  // 음소거 토글
+  // 음소거 토글 — 글리프 교체는 #mute-icon의 <use> href만 바꾼다 (SVG 보존)
   const muteBtn = document.getElementById('btn-mute');
-  function syncMute() { muteBtn.textContent = A.muted ? '🔇' : '🔊'; }
+  const muteIconUse = document.querySelector('#mute-icon use');
+  function syncMute() {
+    muteIconUse.setAttribute('href', A.muted ? '#p-speaker-slash' : '#p-speaker-high');
+  }
   muteBtn.addEventListener('click', () => { A.init(); A.setMuted(!A.muted); syncMute(); });
   syncMute();
 
@@ -901,6 +904,7 @@
   const SITE = 'https://junhee1219.github.io/gateway';
   const isMobile = () => /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   const shareBtn = document.getElementById('btn-share');
+  const shareLabel = document.getElementById('share-label');
   shareBtn.addEventListener('click', async () => {
     const score = game ? game.score : 0;
     const text = `🍜 라면집 매출 ${(score * MON).toLocaleString()}원! 나보다 장사 잘해봐 ㅋㅋ`;
@@ -909,8 +913,8 @@
         await navigator.share({ title: '라면집 사장님', text, url: SITE });
       } else {
         await navigator.clipboard.writeText(`${text}\n${SITE}`);
-        shareBtn.textContent = '✅ 복사 완료! 카톡에 붙여넣기';
-        setTimeout(() => { shareBtn.textContent = '📤 친구에게 자랑하기'; }, 2000);
+        shareLabel.textContent = '복사 완료! 카톡에 붙여넣기';
+        setTimeout(() => { shareLabel.textContent = '친구에게 자랑하기'; }, 2000);
       }
     } catch (e) { /* 공유 취소 무시 */ }
   });

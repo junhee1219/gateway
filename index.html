@@ -11,15 +11,16 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="kit.css">
 <meta property="og:type" content="website">
-<meta property="og:title" content="🍜 라면집 사장님 — 밀려드는 손님, 사장은 하나">
+<meta property="og:title" content="라면집 사장님 — 밀려드는 손님, 사장은 하나">
 <meta property="og:description" content="세 줄로 밀려드는 손님, 서빙은 한 줄씩만. 연타로 빨리빨리! 줄이 터지면 가게도 끝. 화난 손님들 사이에서 살아남는 원터치 장사 게임">
 <meta property="og:image" content="https://junhee1219.github.io/gateway/og/main.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://junhee1219.github.io/gateway/">
 <meta name="twitter:card" content="summary_large_image">
-<title>🍜 라면집 사장님</title>
+<title>라면집 사장님</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; }
@@ -39,7 +40,11 @@
     background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
     color: #fff; font-size: 19px; cursor: pointer;
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
   }
+  /* kit 아이콘은 .ki(currentColor) — 게임 고유 버튼 위에서 글리프만 교체 */
+  #btn-mute .ki { width: 22px; height: 22px; }
+  #btn-share .ki { width: 16px; height: 16px; vertical-align: -3px; margin-right: 5px; }
 
   /* ── 오버레이 (시작 / 게임오버) ── */
   #overlay {
@@ -78,6 +83,7 @@
     border-radius: 12px; padding: 10px 12px; width: 108px;
   }
   #howto .step b { display: block; font-size: 19px; margin-bottom: 4px; }
+  #howto .step .ki { width: 24px; height: 24px; color: #d6d9ff; }
   #overlay.gameover #howto { display: none; }
 
   #best-label { font-size: 13px; color: #8d92c4; margin-bottom: 14px; }
@@ -135,33 +141,34 @@
 </head>
 <body>
   <canvas id="game"></canvas>
-  <button id="btn-mute" aria-label="소리 켜기/끄기">🔊</button>
+  <button id="btn-mute" aria-label="소리 켜기/끄기"><svg class="ki" id="mute-icon"><use href="#p-speaker-high"/></svg></button>
 
   <div id="overlay">
-    <div id="ov-emoji">🍜</div>
+    <div id="ov-emoji"><svg class="ki-o g" style="width:54px;height:54px"><use href="#g-noodles"/></svg></div>
     <h1>라면집 사장님</h1>
     <p id="ov-msg">밀려드는 손님, 사장은 하나.<br>줄이 꽉 차서 터지면 가게도 끝!</p>
     <div id="howto">
-      <div class="step"><b>👆</b>줄을 탭하면<br>그쪽으로 서빙</div>
-      <div class="step"><b>⚡</b>연타하면<br>빨리빨리!</div>
-      <div class="step"><b>⭐</b>먹방 BJ는 5배!<br>늦으면 악평</div>
+      <div class="step"><b><svg class="ki"><use href="#p-hand-tap"/></svg></b>줄을 탭하면<br>그쪽으로 서빙</div>
+      <div class="step"><b><svg class="ki"><use href="#p-lightning"/></svg></b>연타하면<br>빨리빨리!</div>
+      <div class="step"><b><svg class="ki"><use href="#p-star"/></svg></b>먹방 BJ는 5배!<br>늦으면 악평</div>
     </div>
     <div id="best-label"></div>
     <button id="btn-start">개업!</button>
-    <button id="btn-share">📤 친구에게 자랑하기</button>
+    <button id="btn-share"><svg class="ki"><use href="#p-share-network"/></svg><span id="share-label">친구에게 자랑하기</span></button>
     <div id="snack">
-      <span class="snack-label">재밌었다면 개발자 간식 사주기</span> 🍩
+      <span class="snack-label">재밌었다면 개발자 간식 사주기</span> <svg class="ki-o g" style="width:18px;height:18px;vertical-align:-4px"><use href="#g-donut"/></svg>
       <span class="snack-btns">
         <a class="toss" href="supertoss://send?bank=토스뱅크&accountNo=100025266940&amount=3000">토스</a>
         <a class="kakao" href="https://qr.kakaopay.com/FP0dZW9ip" target="_blank" rel="noopener">카카오페이</a>
       </span>
     </div>
+    <div class="k-credit">Icons: <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a> (CC BY 3.0) · Phosphor</div>
   </div>
 
   <!-- PC에서 앱 딥링크가 안 열릴 때 띄우는 "마음만으로도 고마워요" 모달 -->
   <div id="thanks" class="hidden">
     <div class="thanks-card">
-      <div class="thanks-emoji">🥹☕</div>
+      <div class="thanks-emoji"><svg class="ki" style="width:38px;height:38px;color:#ffcf8a"><use href="#p-coffee"/></svg></div>
       <h2>마음만으로도 감동이에요!</h2>
       <p>송금은 폰에서 열어야 동작하지만,<br>여기까지 눌러주신 것만으로도<br>개발자는 이미 커피 한 잔 마신 기분이에요 💛</p>
       <p class="thanks-sub">정 보내고 싶다면 폰으로 접속해서 눌러주세요!</p>
@@ -169,6 +176,14 @@
     </div>
   </div>
 
+<script>
+  // 아이콘 심볼 시트 주입 — <use href="#..."> 해석용 (game-kit sprite 서브셋)
+  fetch('sprite.svg').then((r) => r.text()).then((t) => {
+    const d = document.createElement('div');
+    d.innerHTML = t;
+    document.body.prepend(d.firstChild);
+  });
+</script>
 <script src="core.js"></script>
 <script src="audio.js"></script>
 <script src="game.js"></script>

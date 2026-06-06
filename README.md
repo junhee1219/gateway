@@ -33,3 +33,8 @@
 - 오디오는 첫 사용자 제스처에서 unlock (iOS 필수) — `GatewayAudio.init()`.
 - 밸런스 철학: 방치 봇은 1분 내 사망, 탐욕 봇(제일 찬 줄)은 스마트 봇보다 ~20% 일찍 죽는다.
   전략이 보상받되 아무도 영생할 수 없다. 검증: `node test.js`.
+
+## 크레딧
+
+- UI 아이콘: [Phosphor Icons](https://phosphoricons.com) (MIT)
+- 게임 오브젝트 아이콘(donut·noodles): [game-icons.net](https://game-icons.net) — **CC BY 3.0** (Delapouite)
